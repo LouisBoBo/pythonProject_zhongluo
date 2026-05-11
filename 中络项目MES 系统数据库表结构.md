@@ -265,8 +265,10 @@
 | CSOURCE_ID | string | 来源系统ID |
 
 ### TBL_BD_PROCESS (工序工艺信息表)
+（**说明**：主键为 **`CID`**；**`TBL_MO.CPROCESS_ID`、`TBL_BD_WC_PROCESS_LINK.CPROCESS_ID`、`TBL_BD_PROCESS_OUTS.CPROCESS_ID`** 等多指向 **`TBL_BD_PROCESS.CID`**。联 **`TBL_BD_WC_PROCESS_LINK`** 时须 **`p.CID = l.CPROCESS_ID`**，**禁止** **`p.CPROCESS_ID`**（现场常见 **207**）。）
 | 字段名 | 字段类型 | 字段注释 |
 |--------|----------|----------|
+| CID | long | 主键 |
 | CIS_COUNT | string | 是否计数工序 |
 | CPARENT_PROCESS_ID | long? | 上级工序ID |
 | CPROCESS_CONTROL_TYPE | long? | 工序管控类型 |
@@ -354,9 +356,10 @@
 | CWC_ID | long | 工作中心ID |
 
 ### TBL_BD_WC_PROCESS_LINK (工作中心与工序关系表)
+（**说明**：**`CPROCESS_ID`** 为外键，指向 **`TBL_BD_PROCESS.CID`**；**`CWC_ID`** 指向 **`TBL_BD_WC.CID`**。**`JOIN`**：**`INNER JOIN dbo.TBL_BD_PROCESS p ON p.CID = l.CPROCESS_ID`**，**`INNER JOIN dbo.TBL_BD_WC w ON l.CWC_ID = w.CID`**。）
 | 字段名 | 字段类型 | 字段注释 |
 |--------|----------|----------|
-| CPROCESS_ID | long | 工序ID |
+| CPROCESS_ID | long | 工序ID（关联 **`TBL_BD_PROCESS.CID`**） |
 | CSEQ | int? | 工序顺序 |
 | CWC_ID | long | 工作中心ID |
 
@@ -3091,6 +3094,7 @@
 | CUSER_NAME | string | 用户账号 |
 
 ### TBL_SFC_PACKAGE (包装信息表)
+（**SQL 生成**：字段注释若含**全角括号 `（` `）`**（如 **`CPARAM_VALUE`**「参数值（板厚）」、**`EXPAND1`**「扩展字段1（内箱3045流水号）」），输出 **`SELECT`** 中文别名时**必须**写作 **`AS [参数值（板厚）]`**、**`AS [扩展字段1（内箱3045流水号）]`**（整段用 **`[`** … **`]`** 包住）；**禁止** **`AS 参数值（板厚）`**——否则 SQL Server 报 **`Incorrect syntax near '\xef\xbc\x88'`**（错误 **102**，即 **`（`** U+FF08）。）
 | 字段名 | 字段类型 | 字段注释 |
 |--------|----------|----------|
 | CBARCODE | string | 条码 |
@@ -3661,9 +3665,10 @@
 | CWP_CODE | string | 工序编码 |
 
 ### TBL_WMS_PACKAGE_IN_RECORDS (入库记录表)
-（**说明**：货位维度为 **`CLOCATION_CODE`（字符串）**，不是 **`CLOCATION_ID`**；与 **`TBL_WMS_ITEM_LOCATION.CLOCATION_ID`** 衔接须经过 **`TBL_WMS_LOCATION`** 转换。**报废数量 `CSCRAP_QTY`** 不在本主表字段列表，而在 **`TBL_WMS_PACKAGE_IN_RECORDS_BOXES`**。）
+（**说明**：货位维度为 **`CLOCATION_CODE`（字符串）**，不是 **`CLOCATION_ID`**；与 **`TBL_WMS_ITEM_LOCATION.CLOCATION_ID`** 衔接须经过 **`TBL_WMS_LOCATION`** 转换。**报废数量 `CSCRAP_QTY`** 不在本主表字段列表，而在 **`TBL_WMS_PACKAGE_IN_RECORDS_BOXES`**。**本表字段列表无 `CBOX_CODE`**；**外箱条码**在 **`TBL_WMS_PACKAGE_IN_RECORDS_BOXES.CBOX_CODE`**。与 **`TBL_SFC_PACKAGE`** 串联时：**推荐** **`LEFT JOIN dbo.TBL_WMS_PACKAGE_IN_RECORDS_BOXES b ON p.CBARCODE = b.CBOX_CODE`**，再 **`LEFT JOIN dbo.TBL_WMS_PACKAGE_IN_RECORDS i ON i.CID = b.CRECORD_ID`**；**禁止** **`p.CBARCODE = i.CBOX_CODE`**（主表无 **`CBOX_CODE`**，易 **207**）。联 **`BOXES`** 时 **禁止** **`i.CRECORD_ID = b.CRECORD_ID`** 且 **`i`** 无 **`CRECORD_ID`**——须 **`i.CID = b.CRECORD_ID`**（主键列名以现场为准）。）
 | 字段名 | 字段类型 | 字段注释 |
 |--------|----------|----------|
+| CID | long | 主键；**`TBL_WMS_PACKAGE_IN_RECORDS_BOXES.CRECORD_ID`** 关联本列 |
 | CBOX_QTY | int? | 箱数 |
 | CDEF_QTY | int? | 叉板数 |
 | CIFMIX | string | 是否叉板混箱 |
