@@ -26,7 +26,7 @@ def main(error_msg: str = None, **kwargs: Any) -> dict[str, str]:
             rules.append(f"【硬约束·207】表 {table_name} 严禁使用 {invalid_item} 字段，数据库不存在，必报错。")
         else:
             rules.append(f"【硬约束·207】字段 {invalid_item} 不存在，禁止在 SQL 中使用。")
-        rules.append("【硬约束】所有字段必须来自参考表结构，禁止臆造字段。")
+        
 
     # === 2. 提取 208 无效表 ===
     elif "Invalid object name" in error_msg:
@@ -48,7 +48,5 @@ def main(error_msg: str = None, **kwargs: Any) -> dict[str, str]:
     elif "8127" in error_msg:
         rules.append("【硬约束·8127】COUNT/SUM 等单行聚合禁止加 ORDER BY。")
 
-    # === 通用规则 ===
-    rules.append("【自检规则】SQL 生成后必须逐列校验：字段/表必须在参考结构中存在。")
-
+  
     return {"rule_text": "\n".join(rules)}
