@@ -524,9 +524,28 @@ def get_document_segments(
                 all_contents.append(content)
                 page_content_count += 1
         log(f"  第 {page} 页：获取 {page_content_count} 条分段")
-        pagination = data.get("pagination", {})
-        total_pages = pagination.get("total_pages", 0)
-        if page >= total_pages or len(segments) < limit:
+        pagination = data.get("pagination") or {}
+        if not isinstance(pagination, dict):
+            pagination = {}
+        total_pages = pagination.get("total_pages")
+        has_more = data.get("has_more")
+        if has_more is None:
+            has_more = pagination.get("has_more")
+        if has_more is True:
+            page += 1
+            time.sleep(config.request_interval)
+            continue
+        if has_more is False:
+            break
+        try:
+            tp = int(total_pages) if total_pages is not None else 0
+        except (TypeError, ValueError):
+            tp = 0
+        # total_pages 缺失或为 0 时不能用 page>=tp 结束，否则只拿第一页（常见 limit=100）
+        if tp > 0:
+            if page >= tp:
+                break
+        elif len(segments) < limit:
             break
         page += 1
         time.sleep(config.request_interval)
