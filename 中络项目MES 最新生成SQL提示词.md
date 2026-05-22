@@ -22,6 +22,8 @@
 - 中文名取自【参考表结构】该表字段列表中的中文说明（如 `CSTART_TIME` → `[开工时间]`，`CSTATUS` → `[状态]`，`CIS_CHECK` → `[是否已审核]`）；
 - **禁止**裸写 `l.CSTART_TIME`、`l.CSTATUS` 等无 `AS` 的列（前端表头会显示英文字段名）；
 - 外键 ID 列（`CITEM_ID`、`CPROCESS_ID`、`CWC_ID` 等）**不要**裸输出，用【维表映射规则】中的中文列替代。
+- **维修工单人员（禁止只显示工号）**：`TBL_EAM_REPAIR` 上 `CAPPLY_MAN`、`CASSIGNMENT_MAN`、`CCLOSE_MAN`、`CREPAIR_MAN`、`CAUDIT_USERNAME` 须 **`LEFT JOIN dbo.TBL_SYS_USER`**（`ON u.CUSER_NAME = er.列名`），**同时输出**工号与 **`CDISPLAY_NAME AS [××人姓名]`**；**禁止**用现场常缺失的 `NAME`、`CODE` 列代替姓名。
+- **状态码 → 中文**（禁止列表只显示数字）：`TBL_EAM_MAINTAIN_TASK.CTASK_STATUS`（任务状态），**禁止**裸写 `emt.CTASK_STATUS`：`0`→待执行，`1`→已执行，`2`→已关闭(未执行)。用户问题含「保养任务」时事实表须为 **`TBL_EAM_MAINTAIN_TASK`**（非默认生产记录表）。
 
 
 **`WITH (NOLOCK)` 写法（硬约束）**：
@@ -48,7 +50,7 @@
 ## 输出格式（严格遵守）
 【相关表】
 1. 表名 | 用途（一句话）
-2. 凡 `CWC_ID` 须列：`TBL_BD_WC wc`、`TBL_BD_WC wc_p`（父级工作中心）；凡开/完工人须列：`TBL_SYS_USER u_s`、`TBL_SYS_USER u_e`（姓名）
+2. 凡 `CWC_ID` 须列：`TBL_BD_WC wc`、`TBL_BD_WC wc_p`（父级工作中心）；凡开/完工人须列：`TBL_SYS_USER u_s`、`TBL_SYS_USER u_e`（姓名）；凡维修工单人员须列对应 `TBL_SYS_USER` 别名（报修/指派/关闭/维修/审核人姓名）
 
 
 

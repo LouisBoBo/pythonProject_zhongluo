@@ -41,6 +41,7 @@
 关联=mo | TBL_MO | mo.CMO_LOT = l.CMO_LOT
 列=mo.CORDER_NO | 工单编号
 列=mo.CMO_LOT | 工单批次
+列=CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END | 工单状态
 
 [映射 item]
 字段=CITEM_ID
@@ -108,11 +109,11 @@
 展示列=l.CSCRAP_NUMBER | 报废数量
 展示列=l.CSHIFT | 班次
 展示列=l.CSTART_TIME | 开工时间
-展示列=l.CSTATUS | 状态
+展示列=CASE l.CSTATUS WHEN 0 THEN N'待审核' WHEN 1 THEN N'已通过' WHEN 2 THEN N'已驳回' ELSE CAST(l.CSTATUS AS NVARCHAR(20)) END | 状态
 展示列=l.CTEMPLATE_ID | 模板ID
 展示列=l.CUNIT | 单位
 展示列=l.CWORK_NUMBER | 工作数量
-展示列=l.CWORK_TYPE | 工作类型
+展示列=CASE l.CWORK_TYPE WHEN 1 THEN N'正常生产记录(检验生产记录)' WHEN 2 THEN N'批量生产记录' WHEN 3 THEN N'无工单生产记录' WHEN 4 THEN N'历史记录新增' WHEN 5 THEN N'FQC生产记录' ELSE CAST(l.CWORK_TYPE AS NVARCHAR(20)) END | 工作类型
 
 [表 TBL_MO]
 标签=工单信息表
@@ -162,7 +163,7 @@
 展示列=m.CSO_DTL_ID | 销售单明细ID
 展示列=m.CSOURCE_ID | 来源ID
 展示列=m.CSOURCE_ORDER_NO | 来源工单编号
-展示列=m.CSTATUS | 工单状态
+展示列=CASE m.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(m.CSTATUS AS NVARCHAR(20)) END | 工单状态
 展示列=m.CTYPE_ID | 工单类型ID
 
 [表 TBL_SFC_WS_LOG_ITEM]
@@ -342,36 +343,69 @@
 列=eamer.CERROR_CODE | 故障代码
 列=eamer.CERROR_NAME | 故障名称
 
+[映射 apply_man]
+字段=CAPPLY_MAN
+类型=账号
+关联=u_apply | TBL_SYS_USER | u_apply.CUSER_NAME = er.CAPPLY_MAN
+列=er.CAPPLY_MAN | 报修人工号
+列=u_apply.CDISPLAY_NAME | 报修人姓名
+禁止=CAPPLY_MAN AS [报修人姓名] 且无 JOIN TBL_SYS_USER
+
+[映射 assignment_man]
+字段=CASSIGNMENT_MAN
+类型=账号
+关联=u_assign | TBL_SYS_USER | u_assign.CUSER_NAME = er.CASSIGNMENT_MAN
+列=er.CASSIGNMENT_MAN | 指派人工号
+列=u_assign.CDISPLAY_NAME | 指派人姓名
+禁止=CASSIGNMENT_MAN AS [指派人姓名] 且无 JOIN TBL_SYS_USER
+
+[映射 close_man]
+字段=CCLOSE_MAN
+类型=账号
+关联=u_close | TBL_SYS_USER | u_close.CUSER_NAME = er.CCLOSE_MAN
+列=er.CCLOSE_MAN | 关闭人工号
+列=u_close.CDISPLAY_NAME | 关闭人姓名
+禁止=CCLOSE_MAN AS [关闭人姓名] 且无 JOIN TBL_SYS_USER
+
+[映射 repair_man]
+字段=CREPAIR_MAN
+类型=账号
+关联=u_repair | TBL_SYS_USER | u_repair.CUSER_NAME = er.CREPAIR_MAN
+列=er.CREPAIR_MAN | 维修人工号
+列=u_repair.CDISPLAY_NAME | 维修人姓名
+禁止=CREPAIR_MAN AS [维修人姓名] 且无 JOIN TBL_SYS_USER
+
+[映射 audit_user]
+字段=CAUDIT_USERNAME
+类型=账号
+关联=u_audit | TBL_SYS_USER | u_audit.CUSER_NAME = er.CAUDIT_USERNAME
+列=er.CAUDIT_USERNAME | 审核/驳回人账号
+列=u_audit.CDISPLAY_NAME | 审核/驳回人姓名
+禁止=CAUDIT_USERNAME AS [审核/驳回人姓名] 且无 JOIN TBL_SYS_USER
+
 展示列=er.CID | 主键ID
 展示列=er.CAPPLY_DATE | 报修时间
-展示列=er.CAPPLY_MAN | 报修人工号
 展示列=er.CASSIGNMENT_DATE | 指派时间
-展示列=er.CASSIGNMENT_MAN | 指派人工号
 展示列=er.CAUDIT_DEPARTMNT | 审核部门
 展示列=er.CAUDIT_STATUS | 审核状态
-展示列=er.CAUDIT_USERNAME | 审核/驳回人
 展示列=er.CCAUSE | 故障根因
 展示列=er.CCLOSE_DATE | 关闭时间
-展示列=er.CCLOSE_MAN | 关闭人工号
 展示列=er.CDEMAND_DATE | 要求完成时间
 展示列=er.CEND_REPAIR_DATE | 结束维修时间
 展示列=er.CERROR_DESC | 故障描述
 展示列=er.CERROR_REASON | 故障原因描述
 展示列=er.CIS_PRODUCT | 是否停产
 展示列=er.CIS_URGENT | 是否紧急
-展示列=er.CODE | 用户工号
 展示列=er.CPLAN_COMPLETE_DATE | 计划完成时间
 展示列=er.CPRIORITY | 优先级
 展示列=er.CREMARK | 备注
 展示列=er.CREPAIR_CODE | 维修单编号
 展示列=er.CREPAIR_DESC | 维修措施说明
-展示列=er.CREPAIR_MAN | 维修人工号
 展示列=er.CSCORE | 评分
 展示列=er.CSTART_REPAIR_DATE | 开始维修时间
 展示列=er.CSTATUS | 工单状态
 展示列=er.CWAIT_MATERIAL_DATE | 开始待料时间
 展示列=er.CWC_CHILDREN | 设备故障子节点
-展示列=er.NAME | 用户姓名
 
 [表 TBL_MEP_MATERIAL_PARAM]
 标签=重点物料参数维护
@@ -653,7 +687,7 @@
 
 [表 TBL_EAM_MAINTAIN_TASK]
 标签=保养任务主表
-关键词=保养任务主表
+关键词=保养任务, 保养, 维护任务, 保养任务主表, EAM_MAINTAIN
 别名=emt
 
 [映射 temp_id_to_np_template]
@@ -671,6 +705,13 @@
 列=wc.CWC_NAME | 机台名称
 列=wc.CWC_NO | 机台编码
 
+[映射 task_status]
+字段=CTASK_STATUS
+说明=任务状态码须译码为中文（0待执行/1已执行/2已关闭），禁止裸列
+列=CASE CAST(emt.CTASK_STATUS AS INT) WHEN 0 THEN N'待执行' WHEN 1 THEN N'已执行' WHEN 2 THEN N'已关闭(未执行)' ELSE CAST(emt.CTASK_STATUS AS NVARCHAR(20)) END | 任务状态
+禁止=emt.CTASK_STATUS AS [任务状态]
+禁止=CTASK_STATUS AS [任务状态]
+
 展示列=emt.CID | 主键ID
 展示列=emt.CAPPROVAL_ID | 审批流ID
 展示列=emt.CAPPROVAL_STATUS | 审批状态
@@ -687,7 +728,6 @@
 展示列=emt.CTASK_NO | 任务编码
 展示列=emt.CTASK_STAND_TIME_E | 标准结束时间
 展示列=emt.CTASK_STAND_TIME_S | 标准开始时间
-展示列=emt.CTASK_STATUS | 任务状态
 展示列=emt.CTASK_TAG | 任务标签
 展示列=emt.CTASK_TYPE | 任务类型
 展示列=emt.CTEMP_NAME | 模板名称

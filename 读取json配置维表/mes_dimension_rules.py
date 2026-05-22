@@ -30,7 +30,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 _CONFIG_PATH = Path(__file__).resolve().parent / "mes_dimension_joins.json"
 # 由 build_dify_bundle.py 注入；Dify 单文件代码节点依赖此项，无需同目录 json
@@ -80,11 +80,15 @@ def infer_fact_table(
     if not q:
         return explicit or "TBL_SFC_WS_LOG"
 
+    best_table = ""
+    best_kw_len = 0
     for tname, tcfg in tables.items():
-        keywords: List[str] = tcfg.get("default_for_keywords") or []
-        for kw in keywords:
-            if kw and kw in q:
-                return tname
+        for kw in tcfg.get("default_for_keywords") or []:
+            if kw and kw in q and len(kw) > best_kw_len:
+                best_kw_len = len(kw)
+                best_table = tname
+    if best_table:
+        return best_table
 
     m = re.search(r"\b(TBL_[A-Z0-9_]+)\b", q, re.I)
     if m:
@@ -136,6 +140,26 @@ def build_query_rules(
         "**列表/明细查询**：`SELECT` 中**每一个**输出列都必须 `AS [中文列名]`，禁止裸写 `l.CSTART_TIME` 等英文字段名作为表头。",
         "",
     ]
+
+    mandatory_decodes: List[str] = []
+    for mp in mappings:
+        for sel in mp.get("select") or []:
+            expr = sel.get("expr") or ""
+            if expr.upper().startswith("CASE "):
+                mandatory_decodes.append(
+                    f"{_apply_alias(expr, alias)} AS [{sel.get('as') or ''}]"
+                )
+    for dc in tcfg.get("display_columns") or []:
+        expr = dc.get("expr") or ""
+        if expr.upper().startswith("CASE "):
+            mandatory_decodes.append(
+                f"{_apply_alias(expr, alias)} AS [{dc.get('as') or ''}]"
+            )
+    if mandatory_decodes:
+        lines.append("### 【强制·状态码译码】（下列表达式必须原样写入 SELECT，禁止改为裸数字列）")
+        for item in mandatory_decodes:
+            lines.append(f"  - `{item}`")
+        lines.append("")
 
     display_cols: List[Dict[str, Any]] = tcfg.get("display_columns") or []
     if display_cols:
@@ -203,6 +227,135 @@ def build_query_rules(
     )
 
     return "\n".join(lines).strip()
+
+
+# 查询结果列名 -> 码值 -> 中文（LLM 仍输出裸码时的兜底，键统一为字符串）
+RESULT_COLUMN_VALUE_MAPS: Dict[str, Dict[str, str]] = {
+    "任务状态": {"0": "待执行", "1": "已执行", "2": "已关闭(未执行)"},
+    "工单状态": {
+        "2": "已发放",
+        "5": "已取消",
+        "6": "已暂停",
+        "7": "外协",
+    },
+    "状态": {"0": "待审核", "1": "已通过", "2": "已驳回"},
+    "工作类型": {
+        "1": "正常生产记录(检验生产记录)",
+        "2": "批量生产记录",
+        "3": "无工单生产记录",
+        "4": "历史记录新增",
+        "5": "FQC生产记录",
+    },
+}
+
+
+def _select_rewrite_pairs(
+    tcfg: Dict[str, Any],
+    alias: str,
+) -> List[Tuple[str, str]]:
+    """返回 (裸 SELECT 片段, CASE 片段) 列表。"""
+    pairs: List[Tuple[str, str]] = []
+    seen: Set[str] = set()
+
+    def _add(case_expr: str, as_name: str, fact_cols: Sequence[str]) -> None:
+        case_sql = _apply_alias(case_expr, alias)
+        full = f"{case_sql} AS [{as_name}]"
+        if full in seen:
+            return
+        seen.add(full)
+        cols = list(fact_cols) or []
+        if not cols:
+            m = re.search(rf"\b{re.escape(alias)}\.(\w+)", case_expr, re.I)
+            if m:
+                cols = [m.group(1)]
+        for fc in cols:
+            for bare in (
+                f"{alias}.{fc} AS [{as_name}]",
+                f"{fc} AS [{as_name}]",
+            ):
+                pairs.append((bare, full))
+
+    for mp in tcfg.get("mappings") or []:
+        fcols = mp.get("fact_columns") or []
+        for sel in mp.get("select") or []:
+            expr = sel.get("expr") or ""
+            if expr.upper().startswith("CASE "):
+                _add(expr, sel.get("as") or "", fcols)
+    for dc in tcfg.get("display_columns") or []:
+        expr = dc.get("expr") or ""
+        if expr.upper().startswith("CASE "):
+            _add(expr, dc.get("as") or "", [])
+    return pairs
+
+
+def apply_sql_display_rewrites(
+    sql: str,
+    fact_table: str = "",
+    config: Optional[Dict[str, Any]] = None,
+) -> str:
+    """将 SELECT 中的裸状态列替换为配置里的 CASE 译码表达式。"""
+    if not sql or not str(sql).strip():
+        return sql
+    cfg = config or load_config()
+    tables: Dict[str, Any] = cfg.get("tables") or {}
+    check_tables: List[str] = []
+    if fact_table:
+        t = _normalize_table_name(fact_table)
+        if t in tables:
+            check_tables.append(t)
+    else:
+        upper = sql.upper()
+        for tname in tables:
+            if tname in upper:
+                check_tables.append(tname)
+
+    out = sql
+    for tname in check_tables:
+        tcfg = tables[tname]
+        alias = (tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l").strip()
+        for bare, full in _select_rewrite_pairs(tcfg, alias):
+            out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
+    return out
+
+
+def decode_result_rows(
+    rows: List[Dict[str, Any]],
+    fact_table: str = "",
+    config: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """结果集展示兜底：将仍为数字/字符串码的列译成中文。"""
+    if not rows:
+        return rows
+    maps = dict(RESULT_COLUMN_VALUE_MAPS)
+    cfg = config or load_config()
+    tname = _normalize_table_name(fact_table)
+    tcfg = (cfg.get("tables") or {}).get(tname) or {}
+    for mp in tcfg.get("mappings") or []:
+        for sel in mp.get("select") or []:
+            expr = sel.get("expr") or ""
+            as_name = sel.get("as") or ""
+            if not as_name or not expr.upper().startswith("CASE "):
+                continue
+            value_map: Dict[str, str] = {}
+            for m in re.finditer(r"WHEN\s+(\d+)\s+THEN\s+N'([^']*)'", expr, re.I):
+                value_map[str(m.group(1))] = m.group(2)
+            if value_map:
+                maps[as_name] = value_map
+
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        new_row = dict(row)
+        for col, value_map in maps.items():
+            if col not in new_row:
+                continue
+            val = new_row[col]
+            if val is None:
+                continue
+            key = str(val).strip()
+            if key in value_map:
+                new_row[col] = value_map[key]
+        out.append(new_row)
+    return out
 
 
 def list_join_tables(fact_table: str, config: Optional[Dict[str, Any]] = None) -> List[str]:

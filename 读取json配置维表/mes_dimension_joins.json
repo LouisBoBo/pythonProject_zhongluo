@@ -33,6 +33,10 @@
             {
               "expr": "mo.CMO_LOT",
               "as": "工单批次"
+            },
+            {
+              "expr": "CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END",
+              "as": "工单状态"
             }
           ],
           "forbidden": []
@@ -278,7 +282,7 @@
           "as": "开工时间"
         },
         {
-          "expr": "l.CSTATUS",
+          "expr": "CASE l.CSTATUS WHEN 0 THEN N'待审核' WHEN 1 THEN N'已通过' WHEN 2 THEN N'已驳回' ELSE CAST(l.CSTATUS AS NVARCHAR(20)) END",
           "as": "状态"
         },
         {
@@ -294,7 +298,7 @@
           "as": "工作数量"
         },
         {
-          "expr": "l.CWORK_TYPE",
+          "expr": "CASE l.CWORK_TYPE WHEN 1 THEN N'正常生产记录(检验生产记录)' WHEN 2 THEN N'批量生产记录' WHEN 3 THEN N'无工单生产记录' WHEN 4 THEN N'历史记录新增' WHEN 5 THEN N'FQC生产记录' ELSE CAST(l.CWORK_TYPE AS NVARCHAR(20)) END",
           "as": "工作类型"
         }
       ]
@@ -482,7 +486,7 @@
           "as": "来源工单编号"
         },
         {
-          "expr": "m.CSTATUS",
+          "expr": "CASE m.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(m.CSTATUS AS NVARCHAR(20)) END",
           "as": "工单状态"
         },
         {
@@ -1119,6 +1123,141 @@
             }
           ],
           "forbidden": []
+        },
+        {
+          "id": "apply_man",
+          "fact_columns": [
+            "CAPPLY_MAN"
+          ],
+          "joins": [
+            {
+              "alias": "u_apply",
+              "table": "TBL_SYS_USER",
+              "on": "u_apply.CUSER_NAME = er.CAPPLY_MAN"
+            }
+          ],
+          "select": [
+            {
+              "expr": "er.CAPPLY_MAN",
+              "as": "报修人工号"
+            },
+            {
+              "expr": "u_apply.CDISPLAY_NAME",
+              "as": "报修人姓名"
+            }
+          ],
+          "forbidden": [
+            "CAPPLY_MAN AS [报修人姓名] 且无 JOIN TBL_SYS_USER"
+          ],
+          "match_type": "account"
+        },
+        {
+          "id": "assignment_man",
+          "fact_columns": [
+            "CASSIGNMENT_MAN"
+          ],
+          "joins": [
+            {
+              "alias": "u_assign",
+              "table": "TBL_SYS_USER",
+              "on": "u_assign.CUSER_NAME = er.CASSIGNMENT_MAN"
+            }
+          ],
+          "select": [
+            {
+              "expr": "er.CASSIGNMENT_MAN",
+              "as": "指派人工号"
+            },
+            {
+              "expr": "u_assign.CDISPLAY_NAME",
+              "as": "指派人姓名"
+            }
+          ],
+          "forbidden": [
+            "CASSIGNMENT_MAN AS [指派人姓名] 且无 JOIN TBL_SYS_USER"
+          ],
+          "match_type": "account"
+        },
+        {
+          "id": "close_man",
+          "fact_columns": [
+            "CCLOSE_MAN"
+          ],
+          "joins": [
+            {
+              "alias": "u_close",
+              "table": "TBL_SYS_USER",
+              "on": "u_close.CUSER_NAME = er.CCLOSE_MAN"
+            }
+          ],
+          "select": [
+            {
+              "expr": "er.CCLOSE_MAN",
+              "as": "关闭人工号"
+            },
+            {
+              "expr": "u_close.CDISPLAY_NAME",
+              "as": "关闭人姓名"
+            }
+          ],
+          "forbidden": [
+            "CCLOSE_MAN AS [关闭人姓名] 且无 JOIN TBL_SYS_USER"
+          ],
+          "match_type": "account"
+        },
+        {
+          "id": "repair_man",
+          "fact_columns": [
+            "CREPAIR_MAN"
+          ],
+          "joins": [
+            {
+              "alias": "u_repair",
+              "table": "TBL_SYS_USER",
+              "on": "u_repair.CUSER_NAME = er.CREPAIR_MAN"
+            }
+          ],
+          "select": [
+            {
+              "expr": "er.CREPAIR_MAN",
+              "as": "维修人工号"
+            },
+            {
+              "expr": "u_repair.CDISPLAY_NAME",
+              "as": "维修人姓名"
+            }
+          ],
+          "forbidden": [
+            "CREPAIR_MAN AS [维修人姓名] 且无 JOIN TBL_SYS_USER"
+          ],
+          "match_type": "account"
+        },
+        {
+          "id": "audit_user",
+          "fact_columns": [
+            "CAUDIT_USERNAME"
+          ],
+          "joins": [
+            {
+              "alias": "u_audit",
+              "table": "TBL_SYS_USER",
+              "on": "u_audit.CUSER_NAME = er.CAUDIT_USERNAME"
+            }
+          ],
+          "select": [
+            {
+              "expr": "er.CAUDIT_USERNAME",
+              "as": "审核/驳回人账号"
+            },
+            {
+              "expr": "u_audit.CDISPLAY_NAME",
+              "as": "审核/驳回人姓名"
+            }
+          ],
+          "forbidden": [
+            "CAUDIT_USERNAME AS [审核/驳回人姓名] 且无 JOIN TBL_SYS_USER"
+          ],
+          "match_type": "account"
         }
       ],
       "display_columns": [
@@ -1131,16 +1270,8 @@
           "as": "报修时间"
         },
         {
-          "expr": "er.CAPPLY_MAN",
-          "as": "报修人工号"
-        },
-        {
           "expr": "er.CASSIGNMENT_DATE",
           "as": "指派时间"
-        },
-        {
-          "expr": "er.CASSIGNMENT_MAN",
-          "as": "指派人工号"
         },
         {
           "expr": "er.CAUDIT_DEPARTMNT",
@@ -1151,20 +1282,12 @@
           "as": "审核状态"
         },
         {
-          "expr": "er.CAUDIT_USERNAME",
-          "as": "审核/驳回人"
-        },
-        {
           "expr": "er.CCAUSE",
           "as": "故障根因"
         },
         {
           "expr": "er.CCLOSE_DATE",
           "as": "关闭时间"
-        },
-        {
-          "expr": "er.CCLOSE_MAN",
-          "as": "关闭人工号"
         },
         {
           "expr": "er.CDEMAND_DATE",
@@ -1191,10 +1314,6 @@
           "as": "是否紧急"
         },
         {
-          "expr": "er.CODE",
-          "as": "用户工号"
-        },
-        {
           "expr": "er.CPLAN_COMPLETE_DATE",
           "as": "计划完成时间"
         },
@@ -1215,10 +1334,6 @@
           "as": "维修措施说明"
         },
         {
-          "expr": "er.CREPAIR_MAN",
-          "as": "维修人工号"
-        },
-        {
           "expr": "er.CSCORE",
           "as": "评分"
         },
@@ -1237,10 +1352,6 @@
         {
           "expr": "er.CWC_CHILDREN",
           "as": "设备故障子节点"
-        },
-        {
-          "expr": "er.NAME",
-          "as": "用户姓名"
         }
       ]
     },
@@ -2224,7 +2335,11 @@
       "fact_alias": "emt",
       "label": "保养任务主表",
       "default_for_keywords": [
-        "保养任务主表"
+        "保养任务",
+        "保养",
+        "维护任务",
+        "保养任务主表",
+        "EAM_MAINTAIN"
       ],
       "mappings": [
         {
@@ -2285,6 +2400,24 @@
           ],
           "forbidden": [],
           "notes": "工作中心两级：父级如开料/钻孔；子级如1#开料机。报工 CWC_ID 多为机台。"
+        },
+        {
+          "id": "task_status",
+          "fact_columns": [
+            "CTASK_STATUS"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE CAST(emt.CTASK_STATUS AS INT) WHEN 0 THEN N'待执行' WHEN 1 THEN N'已执行' WHEN 2 THEN N'已关闭(未执行)' ELSE CAST(emt.CTASK_STATUS AS NVARCHAR(20)) END",
+              "as": "任务状态"
+            }
+          ],
+          "forbidden": [
+            "emt.CTASK_STATUS AS [任务状态]",
+            "CTASK_STATUS AS [任务状态]"
+          ],
+          "notes": "任务状态码须译码为中文（0待执行/1已执行/2已关闭），禁止裸列"
         }
       ],
       "display_columns": [
@@ -2351,10 +2484,6 @@
         {
           "expr": "emt.CTASK_STAND_TIME_S",
           "as": "标准开始时间"
-        },
-        {
-          "expr": "emt.CTASK_STATUS",
-          "as": "任务状态"
         },
         {
           "expr": "emt.CTASK_TAG",
