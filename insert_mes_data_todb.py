@@ -5,8 +5,8 @@ Dify「代码」节点：将 JSON 数组逐条写入 PostgreSQL（每元素一�
 
 Dify 输入变量：
   - records：JSON 数组字符串，或含 records 键的对象
+  - conversation_id：Dify 会话 ID；仅当与库中上次会话不同时 TRUNCATE 再插入，同会话追加
   - 可选：table_name、column_name（默认 mes_data_records / records）
-  - 可选：clear_before_insert（默认 true，插入前 TRUNCATE 清表）
 
 Dify 输出变量：
   - result：成功 | 失败
@@ -34,6 +34,7 @@ DB_CONFIG: Dict[str, Any] = {
 
 DEFAULT_TABLE = "mes_data_records"
 DEFAULT_COLUMN = "records"
+DEFAULT_STATE_TABLE = "mes_data_insert_state"
 
 _RESULT_OK = "成功"
 _RESULT_FAIL = "失败"
@@ -47,6 +48,14 @@ CREATE TABLE IF NOT EXISTS mes_data_records (
     id BIGSERIAL PRIMARY KEY,
     records TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+"""
+
+_CREATE_STATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS mes_data_insert_state (
+    table_name TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 """
 
@@ -121,6 +130,7 @@ def _extract_raw_records(merged: Dict[str, Any]) -> Any:
             "column_name",
             "column",
             "ensure_table",
+            "conversation_id",
             "inputs",
         ):
             raw = next(iter(merged.values()))
@@ -229,6 +239,44 @@ def _connect():
     )
 
 
+def _normalize_conversation_id(raw: Any) -> str:
+    if raw is None or raw == "":
+        raise ValueError("缺少必填参数 conversation_id（Dify 会话 ID）")
+    cid = str(raw).strip()
+    if not cid:
+        raise ValueError("conversation_id 不能为空")
+    return cid
+
+
+def _ensure_state_table(cur: Any, log: List[str]) -> None:
+    cur.execute(_CREATE_STATE_TABLE_SQL)
+    log.append(f"已确保会话状态表存在: {DEFAULT_STATE_TABLE}")
+
+
+def _get_stored_conversation_id(cur: Any, table: str) -> Optional[str]:
+    qstate = _qualified_table_sql(DEFAULT_STATE_TABLE)
+    cur.execute(
+        f"SELECT conversation_id FROM {qstate} WHERE table_name = %s",
+        (table,),
+    )
+    row = cur.fetchone()
+    return str(row[0]) if row and row[0] is not None else None
+
+
+def _upsert_conversation_id(cur: Any, table: str, conversation_id: str) -> None:
+    qstate = _qualified_table_sql(DEFAULT_STATE_TABLE)
+    cur.execute(
+        f"""
+        INSERT INTO {qstate} (table_name, conversation_id, updated_at)
+        VALUES (%s, %s, NOW())
+        ON CONFLICT (table_name) DO UPDATE
+        SET conversation_id = EXCLUDED.conversation_id,
+            updated_at = NOW()
+        """,
+        (table, conversation_id),
+    )
+
+
 def _parse_bool(raw: Any, default: bool = True) -> bool:
     if raw is None or raw == "":
         return default
@@ -270,10 +318,10 @@ def insert_records_items(
     items: List[str],
     log: List[str],
     *,
+    conversation_id: str,
     table: str = DEFAULT_TABLE,
     column: str = DEFAULT_COLUMN,
     ensure_table: bool = True,
-    clear_before_insert: bool = True,
     restart_identity: bool = True,
 ) -> int:
     if not items:
@@ -281,6 +329,8 @@ def insert_records_items(
 
     col = _validate_column(column)
     table = _validate_table(table)
+    conversation_id = _normalize_conversation_id(conversation_id)
+    log.append(f"会话 ID: {conversation_id}")
     log.append(f"开始连接数据库: {_format_db_target(table, col)}")
     conn = _connect()
     log.append("数据库连接成功")
@@ -289,10 +339,25 @@ def insert_records_items(
         if ensure_table and table.split(".")[-1].lower() == DEFAULT_TABLE:
             cur.execute(_CREATE_TABLE_SQL)
             log.append(f"已确保表存在: {DEFAULT_TABLE}")
-        if clear_before_insert:
+        _ensure_state_table(cur, log)
+        stored_cid = _get_stored_conversation_id(cur, table)
+        if stored_cid is None:
+            log.append("首次写入该表，将清表后插入")
+            should_clear = True
+        elif stored_cid != conversation_id:
+            log.append(
+                f"会话已变更: {stored_cid!r} -> {conversation_id!r}，将清表后插入"
+            )
+            should_clear = True
+        else:
+            log.append(f"会话未变更 ({conversation_id})，跳过清表，追加插入")
+            should_clear = False
+        if should_clear:
             _clear_table_before_insert(
                 cur, log, table=table, restart_identity=restart_identity
             )
+            _upsert_conversation_id(cur, table, conversation_id)
+            log.append(f"已更新会话状态: table={table} conversation_id={conversation_id}")
         sql = (
             f"INSERT INTO {_qualified_table_sql(table)} "
             f"({_quote_ident(col)}) VALUES (%s)"
@@ -346,16 +411,18 @@ def main(
         table = str(merged.get("table_name") or merged.get("table") or DEFAULT_TABLE)
         column = str(merged.get("column_name") or merged.get("column") or DEFAULT_COLUMN)
         ensure_table = _parse_bool(merged.get("ensure_table"), default=True)
-        clear_before_insert = _parse_bool(merged.get("clear_before_insert"), default=True)
         restart_identity = _parse_bool(merged.get("restart_identity"), default=True)
+        conversation_id = _normalize_conversation_id(
+            merged.get("conversation_id") or merged.get("conversationId")
+        )
 
         insert_records_items(
             items,
             log,
+            conversation_id=conversation_id,
             table=table,
             column=column,
             ensure_table=ensure_table,
-            clear_before_insert=clear_before_insert,
             restart_identity=restart_identity,
         )
         log.append("=== 执行成功 ===")
@@ -373,4 +440,10 @@ if __name__ == "__main__":
         if len(sys.argv) > 1
         else '{"records":["{\\"k\\":1}","{\\"k\\":2}"]}'
     )
-    print(json.dumps(main(records=sample), ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            main(records=sample, conversation_id="local-test-conversation"),
+            ensure_ascii=False,
+            indent=2,
+        )
+    )

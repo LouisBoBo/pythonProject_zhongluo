@@ -80,13 +80,44 @@ def infer_fact_table(
     if not q:
         return explicit or "TBL_SFC_WS_LOG"
 
-    best_table = ""
-    best_kw_len = 0
+    ws_log_hints = (
+        "生产记录", "报工", "工位", "WS_LOG", "开工", "完工",
+        "是否已审核", "是否完工", "是否已过数", "工作数量", "工作类型",
+    )
+    mo_hints = ("工单", "MO_LOT", "批次", "生产工单")
+    detail_hints = ("明细", "详情", "列表", "列出", "展示", "查看")
+    agg_hints = ("统计", "数量", "多少", "个数", "合计", "总计", "COUNT")
+
+    scores: Dict[str, int] = {}
     for tname, tcfg in tables.items():
+        score = 0
         for kw in tcfg.get("default_for_keywords") or []:
-            if kw and kw in q and len(kw) > best_kw_len:
-                best_kw_len = len(kw)
-                best_table = tname
+            if kw and kw in q:
+                score += max(len(kw), 2)
+        scores[tname] = score
+
+    has_detail = any(h in q for h in detail_hints)
+    has_agg = any(h in q for h in agg_hints)
+    has_ws = any(h in q for h in ws_log_hints)
+    has_mo = any(h in q for h in mo_hints)
+
+    if has_ws:
+        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 12
+    if has_detail and has_ws:
+        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 25
+    if has_detail and has_mo and not has_agg:
+        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 18
+    if has_mo and has_agg and not has_ws:
+        scores["TBL_MO"] = scores.get("TBL_MO", 0) + 20
+    if "生产工单" in q and has_agg:
+        scores["TBL_MO"] = scores.get("TBL_MO", 0) + 15
+
+    best_table = ""
+    best_score = 0
+    for tname, score in scores.items():
+        if score > best_score:
+            best_score = score
+            best_table = tname
     if best_table:
         return best_table
 
@@ -99,8 +130,136 @@ def infer_fact_table(
     return explicit or "TBL_SFC_WS_LOG"
 
 
+# 事实表混查时，除 JOIN 别名外常见的「直接 FROM」别名（如工单语境下仍 FROM 生产记录表 l）
+_COMPANION_DIRECT_ALIASES: Dict[str, Dict[str, str]] = {
+    "TBL_MO": {"l": "TBL_SFC_WS_LOG"},
+}
+
+# 同名 CSTATUS 等字段在不同表含义不同，混查时须分表译码
+_STATUS_FIELD_DISAMBIG: Dict[str, str] = {
+    "TBL_SFC_WS_LOG": "生产记录审核状态（0待审核/1已通过/2已驳回）→ 列名 [状态]",
+    "TBL_MO": "工单发放状态（2已发放/5已取消/6已暂停/7外协）→ 列名 [工单状态]",
+    "TBL_EAM_REPAIR": "维修工单状态（英文码）→ 列名 [工单状态]",
+    "TBL_QM_INSPECT_RECORD": "检验状态 → 列名 [状态]（与生产记录 [状态] 不同）",
+}
+
+
 def _apply_alias(template: str, fact_alias: str) -> str:
     return template.replace(" l.", f" {fact_alias}.").replace("= l.", f"= {fact_alias}.")
+
+
+def _replace_sql_alias(expr: str, old_alias: str, new_alias: str) -> str:
+    if old_alias == new_alias:
+        return expr
+    return re.sub(
+        rf"(?<![\w.]){re.escape(old_alias)}\.",
+        f"{new_alias}.",
+        expr,
+    )
+
+
+def _collect_join_aliases(fact_table: str, config: Dict[str, Any]) -> Dict[str, str]:
+    """SQL 别名 → 维表名（来自事实表 mappings 中的 JOIN + 常见直接 FROM 别名）。"""
+    tcfg = (config.get("tables") or {}).get(fact_table) or {}
+    out: Dict[str, str] = {}
+    for mp in tcfg.get("mappings") or []:
+        for j in mp.get("joins") or []:
+            alias = (j.get("alias") or "").strip()
+            table = _normalize_table_name(j.get("table") or "")
+            if alias and table:
+                out[alias] = table
+    for alias, table in (_COMPANION_DIRECT_ALIASES.get(fact_table) or {}).items():
+        out.setdefault(alias, table)
+    return out
+
+
+def _iter_table_enum_selects(
+    tcfg: Dict[str, Any],
+    target_alias: str,
+    *,
+    config: Optional[Dict[str, Any]] = None,
+) -> List[Tuple[str, str, List[str]]]:
+    """(expr, as_name, fact_columns) — 将配置默认别名替换为 target_alias。"""
+    cfg = config or {}
+    default_alias = (
+        tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l"
+    ).strip()
+    out: List[Tuple[str, str, List[str]]] = []
+    seen: Set[str] = set()
+
+    def _push(expr: str, as_name: str, fcols: Sequence[str]) -> None:
+        if not expr.upper().startswith("CASE "):
+            return
+        sql = _replace_sql_alias(expr, default_alias, target_alias)
+        key = f"{sql}|{as_name}"
+        if key in seen:
+            return
+        seen.add(key)
+        out.append((sql, as_name, list(fcols)))
+
+    for mp in tcfg.get("mappings") or []:
+        if mp.get("match_type") != "enum":
+            continue
+        fcols = mp.get("fact_columns") or []
+        for sel in mp.get("select") or []:
+            _push(sel.get("expr") or "", sel.get("as") or "", fcols)
+    return out
+
+
+def _append_mixed_table_enum_rules(
+    lines: List[str],
+    fact_table: str,
+    fact_alias: str,
+    config: Dict[str, Any],
+) -> None:
+    """工单/生产记录等混查：为 JOIN 表及常见别名追加独立枚举 CASE，避免 CSTATUS 等同名字段串表。"""
+    join_aliases = _collect_join_aliases(fact_table, config)
+    if not join_aliases:
+        return
+
+    blocks: List[str] = []
+    for join_alias, joined_table in sorted(join_aliases.items()):
+        if joined_table == fact_table:
+            continue
+        jtcfg = (config.get("tables") or {}).get(joined_table)
+        if not jtcfg:
+            continue
+        enums = _iter_table_enum_selects(jtcfg, join_alias, config=config)
+        if not enums:
+            continue
+        jlabel = jtcfg.get("label") or joined_table
+        disambig = _STATUS_FIELD_DISAMBIG.get(joined_table, "")
+        block_lines = [
+            f"#### `{joined_table}`（{jlabel}）·SQL 别名 **`{join_alias}`**",
+        ]
+        if disambig:
+            block_lines.append(
+                f"- **分表说明**：{disambig}；**禁止**与 `{fact_table}`/`{fact_alias}` 同名字段混用裸码。"
+            )
+        for expr, as_name, fcols in enums:
+            fcol_txt = ", ".join(fcols) if fcols else "见表达式"
+            block_lines.append(f"- 字段 **{fcol_txt}**：必须 `{expr} AS [{as_name}]`")
+            if fcols:
+                block_lines.append(
+                    f"  - 禁止：`{join_alias}.{fcols[0]} AS [{as_name}]`"
+                )
+            else:
+                block_lines.append(f"  - 禁止裸码 AS [{as_name}]")
+        blocks.extend(block_lines)
+        blocks.append("")
+
+    if not blocks:
+        return
+
+    lines.append(
+        "### 【混查·关联表枚举译码】（与事实表**分表处理**；"
+        "SELECT 含下列列且来自关联表时，**必须**用本段 CASE，禁止裸 `0`/`Y`/`N`）"
+    )
+    lines.append(
+        f"- 事实表 `{fact_table}`（别名 `{fact_alias}`）与下列表**同名不同义**（尤其 `CSTATUS`），"
+        "不可互用 CASE 或裸字段。"
+    )
+    lines.extend(blocks)
 
 
 def _join_line(alias: str, table: str, on: str, fact_alias: str) -> str:
@@ -155,8 +314,27 @@ def build_query_rules(
             mandatory_decodes.append(
                 f"{_apply_alias(expr, alias)} AS [{dc.get('as') or ''}]"
             )
+    enum_mps = [mp for mp in mappings if mp.get("match_type") == "enum"]
+    if enum_mps:
+        lines.append(
+            "### 【最高优先级·枚举/码值译码】（下列列必须**整段**写入 SELECT，"
+            "禁止 `er.CSTATUS`/`er.CIS_PRODUCT` 等裸字段或裸码值）"
+        )
+        for mp in enum_mps:
+            fcols = ", ".join(mp.get("fact_columns") or [])
+            lines.append(f"- 字段 **{fcols}**：")
+            for sel in mp.get("select") or []:
+                expr = _apply_alias(sel.get("expr") or "", alias)
+                as_name = sel.get("as") or ""
+                lines.append(f"  - 必须：`{expr} AS [{as_name}]`")
+            for fb in mp.get("forbidden") or []:
+                lines.append(f"  - 禁止：{fb}")
+        lines.append("")
+
+    _append_mixed_table_enum_rules(lines, tname, alias, cfg)
+
     if mandatory_decodes:
-        lines.append("### 【强制·状态码译码】（下列表达式必须原样写入 SELECT，禁止改为裸数字列）")
+        lines.append("### 【强制·状态码译码】（下列表达式必须原样写入 SELECT，禁止改为裸数字/码值列）")
         for item in mandatory_decodes:
             lines.append(f"  - `{item}`")
         lines.append("")
@@ -187,9 +365,15 @@ def build_query_rules(
             lines.append(f"- 说明：{mp['notes']}")
         if mp.get("match_type") == "account":
             lines.append("- 类型：**账号字符串** → `TBL_SYS_USER.CUSER_NAME`，姓名取 `CDISPLAY_NAME`。")
+        elif mp.get("match_type") == "enum":
+            lines.append("- 类型：**枚举译码**（本表字段，无需 JOIN；`SELECT` 必须用下方 CASE，禁止裸数字列）。")
 
-        lines.append("- **JOIN**（逐条写出，勿省略 `ON`）：")
-        for j in mp.get("joins") or []:
+        joins = mp.get("joins") or []
+        if joins:
+            lines.append("- **JOIN**（逐条写出，勿省略 `ON`）：")
+        elif mp.get("match_type") != "enum":
+            lines.append("- **JOIN**（逐条写出，勿省略 `ON`）：")
+        for j in joins:
             jl = _join_line(
                 j.get("alias") or "dim",
                 j.get("table") or "",
@@ -246,32 +430,61 @@ RESULT_COLUMN_VALUE_MAPS: Dict[str, Dict[str, str]] = {
         "4": "历史记录新增",
         "5": "FQC生产记录",
     },
+    "是否已审核": {"Y": "是", "N": "否", "y": "是", "n": "否"},
+    "是否完工": {"Y": "是", "N": "否", "y": "是", "n": "否"},
+    "是否已过数": {"Y": "是", "N": "否", "y": "是", "n": "否"},
+    "是否停产": {"Y": "是", "N": "否", "y": "是", "n": "否"},
+    "是否紧急": {"Y": "是", "N": "否", "y": "是", "n": "否"},
+    "类型": {
+        "Merger": "合拼",
+        "MERGER": "合拼",
+        "Sample": "样本",
+        "SAMPLE": "样本",
+        "Batch": "批量生产",
+        "BATCH": "批量生产",
+    },
+    "工单状态": {
+        "EAM_REPAIR_STATUS_ASSIGNMENT": "维修指派",
+        "EAM_REPAIR_STATUS_COMPLETE": "维修完成",
+        "EAM_REPAIR_STATUS_CLOSE": "维修取消",
+    },
 }
 
 
 def _select_rewrite_pairs(
     tcfg: Dict[str, Any],
     alias: str,
+    *,
+    config: Optional[Dict[str, Any]] = None,
 ) -> List[Tuple[str, str]]:
     """返回 (裸 SELECT 片段, CASE 片段) 列表。"""
+    cfg = config or {}
+    default_alias = (
+        tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l"
+    ).strip()
     pairs: List[Tuple[str, str]] = []
     seen: Set[str] = set()
 
     def _add(case_expr: str, as_name: str, fact_cols: Sequence[str]) -> None:
-        case_sql = _apply_alias(case_expr, alias)
+        case_sql = _replace_sql_alias(case_expr, default_alias, alias)
         full = f"{case_sql} AS [{as_name}]"
         if full in seen:
             return
         seen.add(full)
         cols = list(fact_cols) or []
         if not cols:
-            m = re.search(rf"\b{re.escape(alias)}\.(\w+)", case_expr, re.I)
+            m = re.search(rf"\b{re.escape(alias)}\.(\w+)", case_sql, re.I)
             if m:
                 cols = [m.group(1)]
         for fc in cols:
+            col_ref = fc
+            if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", fc):
+                col_ref = f"[{fc}]"
             for bare in (
+                f"{alias}.{col_ref} AS [{as_name}]",
                 f"{alias}.{fc} AS [{as_name}]",
                 f"{fc} AS [{as_name}]",
+                f"{alias}.{fc} AS [状态]",
             ):
                 pairs.append((bare, full))
 
@@ -288,6 +501,18 @@ def _select_rewrite_pairs(
     return pairs
 
 
+def _detect_sql_table_aliases(sql: str) -> Dict[str, str]:
+    """SQL 别名 → 表名（FROM/JOIN dbo.TBL_xxx alias WITH (NOLOCK)）。"""
+    out: Dict[str, str] = {}
+    for m in re.finditer(
+        r"(?:FROM|JOIN)\s+dbo\.(\w+)\s+(\w+)\s+WITH\s*(?:\(\s*)?NOLOCK",
+        sql,
+        re.I,
+    ):
+        out[m.group(2)] = _normalize_table_name(m.group(1))
+    return out
+
+
 def apply_sql_display_rewrites(
     sql: str,
     fact_table: str = "",
@@ -298,6 +523,18 @@ def apply_sql_display_rewrites(
         return sql
     cfg = config or load_config()
     tables: Dict[str, Any] = cfg.get("tables") or {}
+    out = sql
+
+    alias_map = _detect_sql_table_aliases(sql)
+    if alias_map:
+        for alias, tname in alias_map.items():
+            tcfg = tables.get(tname)
+            if not tcfg:
+                continue
+            for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
+                out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
+        return out
+
     check_tables: List[str] = []
     if fact_table:
         t = _normalize_table_name(fact_table)
@@ -309,11 +546,10 @@ def apply_sql_display_rewrites(
             if tname in upper:
                 check_tables.append(tname)
 
-    out = sql
     for tname in check_tables:
         tcfg = tables[tname]
         alias = (tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l").strip()
-        for bare, full in _select_rewrite_pairs(tcfg, alias):
+        for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
             out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
     return out
 
@@ -330,17 +566,26 @@ def decode_result_rows(
     cfg = config or load_config()
     tname = _normalize_table_name(fact_table)
     tcfg = (cfg.get("tables") or {}).get(tname) or {}
+    def _merge_case_map(expr: str, as_name: str) -> None:
+        if not as_name or not expr.upper().startswith("CASE "):
+            return
+        value_map: Dict[str, str] = {}
+        for m in re.finditer(r"WHEN\s+(\d+)\s+THEN\s+N'([^']*)'", expr, re.I):
+            value_map[str(m.group(1))] = m.group(2)
+        for m in re.finditer(
+            r"WHEN\s+(?:N')?'([^']+)'\s+THEN\s+N'([^']*)'", expr, re.I
+        ):
+            code = m.group(1)
+            value_map[code] = m.group(2)
+            value_map[code.upper()] = m.group(2)
+        if value_map:
+            maps[as_name] = value_map
+
     for mp in tcfg.get("mappings") or []:
         for sel in mp.get("select") or []:
-            expr = sel.get("expr") or ""
-            as_name = sel.get("as") or ""
-            if not as_name or not expr.upper().startswith("CASE "):
-                continue
-            value_map: Dict[str, str] = {}
-            for m in re.finditer(r"WHEN\s+(\d+)\s+THEN\s+N'([^']*)'", expr, re.I):
-                value_map[str(m.group(1))] = m.group(2)
-            if value_map:
-                maps[as_name] = value_map
+            _merge_case_map(sel.get("expr") or "", sel.get("as") or "")
+    for dc in tcfg.get("display_columns") or []:
+        _merge_case_map(dc.get("expr") or "", dc.get("as") or "")
 
     out: List[Dict[str, Any]] = []
     for row in rows:
@@ -509,11 +754,32 @@ def main(
             mids = [str(x).strip() for x in mapping_ids if str(x).strip()]
 
     rules = build_query_rules(table, config=cfg, mapping_ids=mids)
-    return {
+    out: Dict[str, Any] = {
         "query_rules": rules,
         "fact_table": table,
         "join_tables": ",".join(list_join_tables(table, cfg)),
     }
+    return out
+
+
+def main_with_sql(
+    user_question: str = "",
+    query_sql: str = "",
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """Dify 扩展：可选传入 query_sql，返回修正后的 query_sql。"""
+    out = main(user_question=user_question, **kwargs)
+    sql = (query_sql or "").strip()
+    if sql:
+        cfg = load_config(
+            config_json=kwargs.get("config_json") or "",
+            path=kwargs.get("config_path") or None,
+        )
+        out["query_sql"] = sql
+        out["query_sql_fixed"] = apply_sql_display_rewrites(
+            sql, fact_table=out.get("fact_table") or "", config=cfg
+        )
+    return out
 
 
 if __name__ == "__main__":

@@ -118,8 +118,11 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
                 current_mapping["fact_columns"] = [
                     x.strip() for x in val.split(",") if x.strip()
                 ]
-            elif key == "类型" and val == "账号":
-                current_mapping["match_type"] = "account"
+            elif key == "类型":
+                if val == "账号":
+                    current_mapping["match_type"] = "account"
+                elif val == "枚举":
+                    current_mapping["match_type"] = "enum"
             elif key == "可选" and val in ("是", "true", "True", "1", "yes"):
                 current_mapping["optional"] = True
             elif key == "说明":

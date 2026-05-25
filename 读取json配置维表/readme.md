@@ -8,7 +8,7 @@
 
 | 文件 | 是否手改 | 作用 |
 |------|----------|------|
-| `../中络项目MES 系统数据库表结构V1.1.md` | **要** | 表结构、字段中文名、**关联关系**（权威来源） |
+| `../中络项目MES 系统数据库表结构V1.2.md` | **要** | 表结构、字段中文名、**关联关系**（权威来源） |
 | `mes_dimension_joins.map` | **要** | 维表 JOIN / SELECT 中文别名（表格式，推荐维护入口） |
 | `mes_dimension_joins.json` | 不要手改 | 由 `build_dify_bundle.py` 从 `.map` 解析生成 |
 | `dify_mes_dimension_node.py` | 不要手改 | 同上，**整段复制到 Dify 代码节点** |
@@ -28,18 +28,24 @@
 
 ### 第 1 步：更新表结构文档
 
-在 `中络项目MES 系统数据库表结构V1.1.md` 中补充新表小节，**关联关系**写全，例如：
+在 `中络项目MES 系统数据库表结构V1.2.md` 中补充新表小节，**关联关系**写全，例如：
 
 ```markdown
-238. TBL_XXX_NEW（新业务表）
-- 业务含义：……
-- 字段列表：
-  - CITEM_ID long 料号ID
-  - CPROCESS_ID long 工序ID
-  - CCONFIRMED_USER string 确认人
-- 关联关系：
+#### 216 新业务表 ( TBL_XXX_NEW )
+
+- **业务含义**：……
+- **所属数据库**：192.168.49.10.CIMOM
+
+| 字段名 | 字段类型 | 是否为空 | 默认值 | 说明 |
+|--------|----------|----------|--------|------|
+| CITEM_ID | long | 否 | - | 料号ID，对应TBL_BD_ITEM.CID |
+| CPROCESS_ID | long | 否 | - | 工序ID，对应TBL_BD_PROCESS.CID |
+| CCONFIRMED_USER | string | 是 | - | 确认人，对应TBL_SYS_USER.CUSER_NAME |
+- **关联关系**：
   - TBL_XXX_NEW.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_XXX_NEW.CPROCESS_ID = TBL_BD_PROCESS.CID
+
+---
 ```
 
 说明：确认人、创建人等**账号字符串**字段，即使文档未写关联，`generate_dimension_map_from_schema.py` 也会按字段名自动补 `TBL_SYS_USER` 映射。
@@ -147,7 +153,7 @@ python3 build_dify_bundle.py
 ```text
 新表 / 新关联上线
   │
-  ├─ 写入 中络项目MES 系统数据库表结构V1.1.md
+  ├─ 写入 中络项目MES 系统数据库表结构V1.2.md
   │
   ├─ 只加 1 张表 ──► 手改 mes_dimension_joins.map
   │
@@ -173,5 +179,5 @@ python3 mes_dimension_rules.py --question "查最近报工记录"
 ## 相关文档
 
 - SQL 生成总规则：`../中络项目MES 最新生成SQL提示词.md`
-- 表结构全文：`../中络项目MES 系统数据库表结构V1.1.md`
+- 表结构全文：`../中络项目MES 系统数据库表结构V1.2.md`
 - 示例规则输出：`规则.txt`（仅供参考，以 `.map` / 代码节点为准）

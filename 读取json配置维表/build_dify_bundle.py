@@ -76,21 +76,26 @@ def main() -> None:
 
 
 DIFY_ENTRY = '''
-def _run_dify(user_question: str = ""):
-    return main(user_question=user_question or "")
+def _run_dify(user_question: str = "", query_sql: str = ""):
+    return main_with_sql(user_question=user_question or "", query_sql=query_sql or "")
 
 
-# Dify 代码节点：仅声明输入变量 user_question（接用户问题）
+# Dify 代码节点入参：user_question（必填）；query_sql（可选，LLM 生成 SQL 传入则自动 CASE 译码修正）
 try:
     user_question
 except NameError:
     user_question = ""
+try:
+    query_sql
+except NameError:
+    query_sql = ""
 
-_out = _run_dify(user_question=user_question)
+_out = _run_dify(user_question=user_question, query_sql=query_sql)
 dimension_rules = _out["query_rules"]
 fact_table = _out["fact_table"]
 _join_list = _out["join_tables"]
 join_tables = _join_list if isinstance(_join_list, str) else ",".join(_join_list)
+query_sql_fixed = _out.get("query_sql_fixed") or ""
 '''
 
 if __name__ == "__main__":
