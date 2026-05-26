@@ -1,0 +1,209 @@
+# 中络 MES 数据库表结构审核规则 v1.2
+# 主审：命名规范、字段类型、主外键约束、索引设计
+# 辅审：注释文档、MES 公共字段、对象治理、表结构设计
+# 维护：改本文件说明 → 同步 dify_audit_db_scheme.py 逻辑 → 复制到 Dify
+
+meta:
+  name: mes_db_schema_audit
+  version: "1.2"
+  description: >
+    对 dify_get_db_scheme 输出的 schema_data 做表结构审核。
+    severity: error=必须修复(🔴) | warning=建议修复(🟡) | info=提示优化(🟢淡绿)
+
+audit_pillars:
+  primary:
+    - id: naming
+      title: 命名规范
+      rules:
+        - TABLE_NAME_FORMAT
+        - COLUMN_NAME_FORMAT
+        - PK_PREFER_CID
+        - FK_NAMING_FORMAT
+        - INDEX_NAMING_FORMAT
+    - id: datatype
+      title: 字段类型
+      rules:
+        - VARCHAR_NEED_LENGTH
+        - VARCHAR_MAX_ABUSE
+        - DATETIME_LEGACY
+        - FLOAT_FOR_KEY
+        - MONEY_USE_DECIMAL
+    - id: constraint
+      title: 主外键约束
+      rules:
+        - PK_REQUIRED
+        - PK_NULLABLE
+        - PK_COMPOSITE_MANY
+        - FK_COLUMN_MISSING
+        - FK_REF_TABLE_NOT_SCANNED
+        - FK_NAMING_FORMAT
+    - id: index
+      title: 索引设计
+      rules:
+        - FK_NO_INDEX
+        - INDEX_DUPLICATE_COLUMNS
+        - INDEX_TOO_MANY
+        - INDEX_UNKNOWN_COLUMN
+        - INDEX_NAMING_FORMAT
+  secondary:
+    - id: documentation
+      title: 文档与注释
+      rules:
+        - TABLE_COMMENT_REQUIRED
+        - COLUMN_COMMENT_REQUIRED
+    - id: mes_standard
+      title: MES 企业标准
+      rules:
+        - STD_FIELD_CID
+        - STD_FIELD_AUDIT_CREATED
+        - STD_FIELD_AUDIT_MODIFIED
+        - STD_FIELD_STATE
+        - STATUS_FIELD_SUGGEST
+    - id: governance
+      title: 对象治理
+      rules:
+        - RESERVED_TEST_NAME
+    - id: design
+      title: 表结构设计
+      rules:
+        - MIN_COLUMN_COUNT
+        - DUPLICATE_COLUMN_NAME
+
+exclude_table_patterns:
+  - "^VW_"
+  - "^VM_"
+  - "^VIEW_"
+  - "_TEST$"
+  - "_BAK$"
+  - "_TEMP$"
+  - "_TMP$"
+
+link_table_suffixes:
+  - "_MAP"
+  - "_LINK"
+  - "_ITEM"
+  - "_LOG_ITEM"
+  - "_DETAIL"
+  - "_DTL"
+  - "_LINE"
+  - "_EXT"
+  - "_RECORD_ITEM"
+
+column_name_exceptions:
+  - CID
+  - ID
+  - CUSTOMER_CODE
+  - Param1
+  - Param2
+
+# 规则清单（实现见 dify_audit_db_scheme.py）
+rules:
+  # --- 命名规范 ---
+  - id: TABLE_NAME_FORMAT
+    severity: warning
+    category: naming
+  - id: COLUMN_NAME_FORMAT
+    severity: warning
+    category: naming
+  - id: PK_PREFER_CID
+    severity: info
+    category: naming
+  - id: FK_NAMING_FORMAT
+    severity: info
+    category: constraint
+  - id: INDEX_NAMING_FORMAT
+    severity: warning
+    category: index
+
+  # --- 字段类型 ---
+  - id: VARCHAR_NEED_LENGTH
+    severity: warning
+    category: datatype
+  - id: VARCHAR_MAX_ABUSE
+    severity: warning
+    category: datatype
+  - id: DATETIME_LEGACY
+    severity: info
+    category: datatype
+  - id: FLOAT_FOR_KEY
+    severity: warning
+    category: datatype
+  - id: MONEY_USE_DECIMAL
+    severity: info
+    category: datatype
+
+  # --- 主外键约束 ---
+  - id: PK_REQUIRED
+    severity: error
+    category: integrity
+  - id: PK_NULLABLE
+    severity: error
+    category: constraint
+  - id: PK_COMPOSITE_MANY
+    severity: info
+    category: constraint
+  - id: FK_COLUMN_MISSING
+    severity: error
+    category: constraint
+  - id: FK_REF_TABLE_NOT_SCANNED
+    severity: info
+    category: constraint
+  - id: FK_NO_INDEX
+    severity: warning
+    category: index
+
+  # --- 索引设计 ---
+  - id: INDEX_DUPLICATE_COLUMNS
+    severity: warning
+    category: index
+  - id: INDEX_TOO_MANY
+    severity: warning
+    category: index
+  - id: INDEX_UNKNOWN_COLUMN
+    severity: error
+    category: index
+
+  # --- 文档与注释 ---
+  - id: TABLE_COMMENT_REQUIRED
+    severity: warning
+    category: documentation
+  - id: COLUMN_COMMENT_REQUIRED
+    severity: warning
+    category: documentation
+
+  # --- MES 公共字段 ---
+  - id: STD_FIELD_CID
+    severity: info
+    category: mes_standard
+  - id: STD_FIELD_AUDIT_CREATED
+    severity: info
+    category: mes_standard
+  - id: STD_FIELD_AUDIT_MODIFIED
+    severity: info
+    category: mes_standard
+  - id: STD_FIELD_STATE
+    severity: info
+    category: mes_standard
+  - id: STATUS_FIELD_SUGGEST
+    severity: info
+    category: mes_standard
+
+  # --- 治理与设计 ---
+  - id: RESERVED_TEST_NAME
+    severity: warning
+    category: governance
+  - id: MIN_COLUMN_COUNT
+    severity: warning
+    category: design
+  - id: DUPLICATE_COLUMN_NAME
+    severity: error
+    category: design
+
+scoring:
+  error_penalty: 10
+  warning_penalty: 3
+  info_penalty: 0
+  pass_max_errors: 0
+  # warning 条数多（如批量缺注释）时，扣分封顶，避免 56×3 直接把分扣成 0
+  max_warning_penalty: 45
+  min_score_when_pass: 60
