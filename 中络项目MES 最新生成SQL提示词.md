@@ -29,6 +29,18 @@
   - `CIS_PRODUCT` → **必须** CASE 译码 `[是否停产]`（Y→是，N→否），**禁止**裸 `Y`/`N`；
   - `CIS_URGENT` → **必须** CASE 译码 `[是否紧急]`（Y→是，N→否），**禁止**裸 `Y`/`N`；
   - 用户问题含「维修工单」「报修」「维修单」时事实表须为 **`TBL_EAM_REPAIR`**（非生产记录表）。
+- **采购单 / 采购订单主表（列表、按年查询，无「明细」）**：
+  - 「采购单」「采购订单」**同义**，均指 **`TBL_SRM_PO`**（别名 `sp`），**禁止**误用 `TBL_SFC_WS_LOG` 或其它表；
+  - 用户问「××年采购订单」「采购单列表」等且**未**含「明细/详情/行项目」时，事实表须为 **`TBL_SRM_PO`**，按年过滤用 **`sp.CPURCHASE_DATE`** 半开区间（如 2026 年 → `>= '2026-01-01 00:00:00' AND < '2027-01-01 00:00:00'`）；
+  - **禁止**因措辞是「采购订单」就只查 `TBL_SRM_PO_DETAIL` 或臆造不存在的表；含「明细」时才用下方 `TBL_SRM_PO_DETAIL` 规则。
+- **采购订单明细 + 采购单号（粘连写法必识别）**：
+  - 用户问题含「采购订单明细」「采购单明细」「采购明细」「PO 明细」等时，事实表须为 **`TBL_SRM_PO_DETAIL`**（别名 `spd`），**禁止**只查 `TBL_SRM_PO` 主表；
+  - **必须** `INNER JOIN dbo.TBL_SRM_PO srmpo WITH (NOLOCK) ON srmpo.CID = spd.CPO_ID`，`SELECT` 须输出 **`srmpo.CPO AS [采购单号]`**；
+  - 问句中的 ERP 采购单号（常见 `PO`/`POA` 开头字母数字串，可与中文粘连，如 **`POA250314497采购订单明细`**、**`POA2605281139采购单明细`**）**即使未出现「采购单号」四字**，也**必须**写 `WHERE srmpo.CPO = N'提取的单号'`（或 `LIKE` 仅当用户明确要求模糊）；
+  - **禁止**用 `spd.CBUSINESS_BILL_CODE`、`spd.CITEM_CODE`、`spd.CSOURCE_ID` 等代替采购单号过滤；明细表**无** `CPO` 列，**禁止** `spd.CPO`；
+  - 「采购单号POA…采购明细」「POA…采购单明细」与「POA…采购订单明细」须生成**同一逻辑**的 SQL（仅措辞不同）。
+  - **列全集（用户未点名只要某几列时必做）**：`SELECT` 须包含【维表映射规则】中 `TBL_SRM_PO_DETAIL` 的**全部「事实表本表列」**及映射 **`item`、`po_id_to_srm_po` 的全部必须列**（含 `[料号]`、`[品名]`、`[采购单号]`、`[业务类型]` 等）；**禁止**只输出主键、外键 ID、单号、单位、数量、备注等 6 列左右的子集；
+  - **禁止裸外键**：不得 `spd.CITEM_ID AS [物料ID]`、`spd.CPO_ID`；物料须 `LEFT JOIN dbo.TBL_BD_ITEM i WITH (NOLOCK) ON i.CID = spd.CITEM_ID` 输出 `[料号]`/`[品名]`；本表已有 `CITEM_CODE`、`CITEM_NAME`、`CITEM_SPEC` 等列须一并输出。
 
 
 **`WITH (NOLOCK)` 写法（硬约束）**：

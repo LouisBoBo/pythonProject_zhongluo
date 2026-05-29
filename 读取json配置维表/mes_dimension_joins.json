@@ -16919,7 +16919,10 @@
       "fact_alias": "sp",
       "label": "采购单",
       "default_for_keywords": [
-        "采购单"
+        "采购单",
+        "采购订单",
+        "PO",
+        "SRM采购"
       ],
       "mappings": [
         {
@@ -17137,7 +17140,11 @@
       "fact_alias": "spd",
       "label": "采购订单明细",
       "default_for_keywords": [
-        "采购订单明细"
+        "采购订单明细",
+        "采购单明细",
+        "采购明细",
+        "PO明细",
+        "采购订单行"
       ],
       "mappings": [
         {
@@ -17166,7 +17173,9 @@
               "as": "类型"
             }
           ],
-          "forbidden": []
+          "forbidden": [
+            "spd.CITEM_ID AS [物料ID] 或任何裸输出 CITEM_ID（须用本映射中文列）"
+          ]
         },
         {
           "id": "po_id_to_srm_po",
@@ -17182,11 +17191,19 @@
           ],
           "select": [
             {
+              "expr": "srmpo.CPO",
+              "as": "采购单号"
+            },
+            {
               "expr": "srmpo.CBUSINESS_TYPE",
               "as": "业务类型"
             }
           ],
-          "forbidden": []
+          "forbidden": [
+            "spd.CPO 或仅用 spd.CBUSINESS_BILL_CODE 过滤 PO/POA 采购单号（须 srmpo.CPO）",
+            "spd.CPO_ID 或裸输出 CPO_ID（须用本映射 [采购单号]）"
+          ],
+          "notes": "按采购单号查明细时须 JOIN 本组；单号过滤列 srmpo.CPO（非明细表字段）"
         }
       ],
       "display_columns": [
@@ -20553,6 +20570,8 @@
     "FROM/JOIN 表名与 WITH (NOLOCK) 拆成两行",
     "用 TBL_EAP_DEVICE 解析 CWC_ID（工作中心/机台须 TBL_BD_WC）",
     "p.CPROCESS_ID 作工序主键（须 p.CID = 事实表.CPROCESS_ID）",
-    "wc.CWC_NAME AS [工序名称] 或 p.CPROCESS_NAME AS [工作中心名称]"
+    "wc.CWC_NAME AS [工序名称] 或 p.CPROCESS_NAME AS [工作中心名称]",
+    "查采购订单明细时只 FROM TBL_SRM_PO 不 JOIN TBL_SRM_PO_DETAIL",
+    "问句含 PO/POA 采购单号却不写 WHERE srmpo.CPO（须 JOIN TBL_SRM_PO）"
   ]
 }

@@ -112,6 +112,25 @@ def infer_fact_table(
     if "生产工单" in q and has_agg:
         scores["TBL_MO"] = scores.get("TBL_MO", 0) + 15
 
+    po_detail_hints = (
+        "采购订单明细", "采购单明细", "采购明细", "PO明细", "采购订单行",
+    )
+    po_detail_context = has_detail or any(
+        h in q for h in ("明细", "详情", "行项目", "物料行")
+    )
+    if any(h in q for h in po_detail_hints) or (
+        po_detail_context and re.search(r"\bP[OA]\w+", q, re.I)
+    ):
+        scores["TBL_SRM_PO_DETAIL"] = scores.get("TBL_SRM_PO_DETAIL", 0) + 30
+
+    po_master_hints = ("采购单", "采购订单", "SRM采购")
+    if (
+        any(h in q for h in po_master_hints)
+        and not po_detail_context
+        and "交付" not in q
+    ):
+        scores["TBL_SRM_PO"] = scores.get("TBL_SRM_PO", 0) + 28
+
     best_table = ""
     best_score = 0
     for tname, score in scores.items():
@@ -134,6 +153,9 @@ def infer_fact_table(
 _COMPANION_DIRECT_ALIASES: Dict[str, Dict[str, str]] = {
     "TBL_MO": {"l": "TBL_SFC_WS_LOG"},
 }
+
+# 用户问「××明细/详情」且未点名只要某几列时，SELECT 须包含该表全部展示列与映射列
+_FULL_DETAIL_SELECT_TABLES: Set[str] = {"TBL_SRM_PO_DETAIL"}
 
 # 同名 CSTATUS 等字段在不同表含义不同，混查时须分表译码
 _STATUS_FIELD_DISAMBIG: Dict[str, str] = {
@@ -293,12 +315,19 @@ def build_query_rules(
     if mapping_ids:
         id_filter = {str(x).strip() for x in mapping_ids if str(x).strip()}
 
+    full_detail = tname in _FULL_DETAIL_SELECT_TABLES
     lines: List[str] = [
         f"【维表映射规则·自动生成】事实表：**{tname}**（{label}），别名 **`{alias}`**。",
         "生成 SQL 时**必须**按下述 JOIN 与 SELECT 展示列执行（片段无对应维表则跳过该条并在【相关表】说明）。",
         "**列表/明细查询**：`SELECT` 中**每一个**输出列都必须 `AS [中文列名]`，禁止裸写 `l.CSTART_TIME` 等英文字段名作为表头。",
-        "",
     ]
+    if full_detail:
+        lines.append(
+            "**本表为采购类明细**：用户问某单号+明细/详情且**未**点名只要某几列时，"
+            "`SELECT` 须包含下文**全部**「事实表本表列」与各映射「必须列」，"
+            "禁止只输出主键、外键 ID、单号、单位、数量、备注等少量列。"
+        )
+    lines.append("")
 
     mandatory_decodes: List[str] = []
     for mp in mappings:
@@ -341,7 +370,12 @@ def build_query_rules(
 
     display_cols: List[Dict[str, Any]] = tcfg.get("display_columns") or []
     if display_cols:
-        lines.append("### 事实表本表列（须 `AS` 中文别名，勿裸列名）")
+        dc_title = (
+            "### 【必须·事实表本表列】（须**全部**写入 SELECT，禁止只选子集）"
+            if full_detail
+            else "### 事实表本表列（须 `AS` 中文别名，勿裸列名）"
+        )
+        lines.append(dc_title)
         for dc in display_cols:
             expr = _apply_alias(dc.get("expr") or "", alias)
             as_name = dc.get("as") or ""
@@ -384,7 +418,12 @@ def build_query_rules(
                 seen_joins.add(jl)
             lines.append(f"  - `{jl}`")
 
-        lines.append("- **SELECT 推荐列**（替代裸 ID/裸账号）：")
+        sel_label = (
+            "- **SELECT 必须列**（须写入 SELECT，替代裸 ID/裸账号）："
+            if full_detail
+            else "- **SELECT 推荐列**（替代裸 ID/裸账号）："
+        )
+        lines.append(sel_label)
         for sel in mp.get("select") or []:
             expr = _apply_alias(sel.get("expr") or "", alias)
             as_name = sel.get("as") or ""
@@ -409,6 +448,11 @@ def build_query_rules(
         f"工作中心/工序/人员列是否来自对应维表而非同源；"
         f"**SELECT 每一列是否均有 `AS [中文名]`（含本表时间/状态/备注等列）**。"
     )
+    if full_detail:
+        lines.append(
+            "- **采购明细列全集**：`SELECT` 是否已包含上文全部「事实表本表列」与各映射「必须列」；"
+            "是否**未**裸输出 `spd.CITEM_ID`/`spd.CPO_ID`；是否**未**只选 6 列左右子集。"
+        )
 
     return "\n".join(lines).strip()
 

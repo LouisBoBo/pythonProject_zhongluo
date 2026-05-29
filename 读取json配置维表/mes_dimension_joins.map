@@ -31,6 +31,8 @@
 禁止=用 TBL_EAP_DEVICE 解析 CWC_ID（工作中心/机台须 TBL_BD_WC）
 禁止=p.CPROCESS_ID 作工序主键（须 p.CID = 事实表.CPROCESS_ID）
 禁止=wc.CWC_NAME AS [工序名称] 或 p.CPROCESS_NAME AS [工作中心名称]
+禁止=查采购订单明细时只 FROM TBL_SRM_PO 不 JOIN TBL_SRM_PO_DETAIL
+禁止=问句含 PO/POA 采购单号却不写 WHERE srmpo.CPO（须 JOIN TBL_SRM_PO）
 
 [表 TBL_SFC_WS_LOG]
 标签=生产记录表
@@ -4909,8 +4911,9 @@
 
 [表 TBL_SRM_PO]
 标签=采购单
-关键词=采购单
+关键词=采购单, 采购订单, PO, SRM采购
 别名=sp
+说明=用户问采购单/采购订单列表或按年统计（问句无「明细/详情/行项目」）时事实表为本表，日期过滤用 CPURCHASE_DATE；「采购订单」与「采购单」同义
 
 [映射 supplier]
 字段=CSUPPLIER_ID
@@ -4970,8 +4973,9 @@
 
 [表 TBL_SRM_PO_DETAIL]
 标签=采购订单明细
-关键词=采购订单明细
+关键词=采购订单明细, 采购单明细, 采购明细, PO明细, 采购订单行
 别名=spd
+说明=用户问某 PO/POA 单号+明细/详情且未点名只要某几列时，SELECT 须包含本表全部展示列及下方各映射必须列，禁止只选 6 列左右子集
 
 [映射 item]
 字段=CITEM_ID
@@ -4979,11 +4983,16 @@
 列=i.CITEM_NO | 料号
 列=i.CITEM_NAME | 品名
 列=CASE UPPER(RTRIM(i.CTYPE)) WHEN 'MERGER' THEN N'合拼' WHEN 'SAMPLE' THEN N'样本' WHEN 'BATCH' THEN N'批量生产' ELSE i.CTYPE END | 类型
+禁止=spd.CITEM_ID AS [物料ID] 或任何裸输出 CITEM_ID（须用本映射中文列）
 
 [映射 po_id_to_srm_po]
 字段=CPO_ID
 关联=srmpo | TBL_SRM_PO | srmpo.CID = spd.CPO_ID
+说明=按采购单号查明细时须 JOIN 本组；单号过滤列 srmpo.CPO（非明细表字段）
+列=srmpo.CPO | 采购单号
 列=srmpo.CBUSINESS_TYPE | 业务类型
+禁止=spd.CPO 或仅用 spd.CBUSINESS_BILL_CODE 过滤 PO/POA 采购单号（须 srmpo.CPO）
+禁止=spd.CPO_ID 或裸输出 CPO_ID（须用本映射 [采购单号]）
 
 展示列=spd.CASSIGNED_QTY | 分配数量
 展示列=spd.CBUSINESS_BILL_CODE | 业务单号
