@@ -102,6 +102,8 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
                 tbl["default_for_keywords"] = [x.strip() for x in val.split(",") if x.strip()]
             elif key == "别名":
                 tbl["fact_alias"] = val
+            elif key == "默认排序":
+                tbl["default_order_by"] = val
             continue
 
         if key == "展示列" and current_table:

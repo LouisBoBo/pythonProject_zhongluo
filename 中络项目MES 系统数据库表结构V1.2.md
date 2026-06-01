@@ -2030,7 +2030,7 @@
 | CINSPECT_CODE | string | 是 | - | 检验单号 |
 | CINSPECT_QTY | decimal? | 是 | - | 检验数量 |
 | CINSPECT_TIME | DateTime? | 是 | - | 检验时间 |
-| CINSPECT_TYPE | int | 否 | - | 检验类型 |
+| CINSPECT_TYPE | int | 否 | - | 检验类型：1首件、2巡检 |
 | CINSPECT_USER_NAME | string | 是 | - | 检验人，对应TBL_SYS_USER.CUSER_NAME |
 | CIS_LAB | string | 是 | - | 是否送实验室 |
 | CITEM_ID | long? | 是 | - | 外键，产品ID  对应TBL_BD_ITEM.CID |
@@ -2078,7 +2078,7 @@
 | CINSPECTION_RECORD_ID | long | 否 | - | 检验记录主表ID，对应TBL_QM_INSPECT_RECORD.CID |
 | CIS_PHYSICS_LAB | string | 是 | - | 是否送物理实验室，Y：是；N：否 |
 | CREMARK | string | 是 | - | 备注 |
-| CRESULT | int | 否 | - | 检验结果：0不合格，1合格 |
+| CRESULT | int | 否 | - | 检验结果：2不合格，1合格 |
 | CSAMPLE_QTY | string | 是 | - | 抽样数量 |
 | CSEQ | int? | 是 | - | 顺序号 |
 | CSTANDARD_MAX_ALLOW | string | 是 | - | 标准上限是否允许等于，Y：是；N：否 |
@@ -4276,7 +4276,7 @@
 | CRECEIVING_USER | string | 是 | - | 收货人，对应TBL_SYS_USER.CUSER_NAME |
 | CREMARK | string | 是 | - | 备注 |
 | CSOURCE_ID | string | 是 | - | 来源ID |
-| CSTATUS | string | 是 | - | 状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中 |
+| CSTATUS | string | 是 | - | 状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库 |
 | CSUPPLIER_ID | Int64? | 是 | - | 供应商ID，对应TBL_BD_SUPPLIER.CID |
 | CID | long | 否 | - | 主键 |
 - **关联关系**：
@@ -4332,7 +4332,7 @@
 | CSOURCE_ID | string | 是 | - | 来源ID |
 | CSOURCE_NO | string | 是 | - | 来源单号 |
 | CSOURCE_TYPE | string | 是 | - | 来源类型 |
-| CSTATUS | string | 是 | - | 状态 |
+| CSTATUS | string | 是 | - | 状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库 |
 | CUNIT | string | 是 | - | 单位 |
 | CWAREHOUSE_ID | Int64? | 是 | - | 仓库ID，对应TBL_WMS_WAREHOUSE.CID |
 | CID | long | 否 | - | 主键 |

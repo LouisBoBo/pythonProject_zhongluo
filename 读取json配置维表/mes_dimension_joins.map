@@ -33,6 +33,7 @@
 禁止=wc.CWC_NAME AS [工序名称] 或 p.CPROCESS_NAME AS [工作中心名称]
 禁止=查采购订单明细时只 FROM TBL_SRM_PO 不 JOIN TBL_SRM_PO_DETAIL
 禁止=问句含 PO/POA 采购单号却不写 WHERE srmpo.CPO（须 JOIN TBL_SRM_PO）
+禁止=无时间条件的明细列表查询省略 ORDER BY（须按主时间列 DESC 由近到远）
 
 [表 TBL_SFC_WS_LOG]
 标签=生产记录表
@@ -186,9 +187,9 @@
 [映射 mo_lot_to_mo_outs]
 字段=CMO_LOT
 关联=moout | TBL_MO_OUTS | moout.CMO_LOT = mo.CMO_LOT
-列=moout.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
-列=moout.COS_NO | 外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号
-列=moout.CSO_NO | 销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号
+列=moout.CITEM_NO | 料号
+列=moout.COS_NO | 外协订单号
+列=moout.CSO_NO | 销售订单号
 
 [映射 mo_lot_to_qm_pl_log]
 字段=CMO_LOT
@@ -281,29 +282,37 @@
 
 [表 TBL_QM_INSPECT_RECORD]
 标签=检验记录主表
-关键词=检验记录, IPQC, FQC
+关键词=检验记录, IPQC, FQC, 品质检验
 别名=qir
+默认排序=COALESCE(qir.CINSPECT_TIME, qir.CCHECK_TIME, qir.CLAB_INSPECT_TIME) DESC, qir.CID DESC
 
 [映射 decision_mode]
 字段=CDECISION_MODE
 类型=枚举
-说明=枚举译码：判定模式：1系统自动判定、2用户人为判定
-列=CASE qir.CDECISION_MODE WHEN 1 THEN N'系统自动判定、2用户人为判定' WHEN 2 THEN N'用户人为判定' ELSE CAST(qir.CDECISION_MODE AS NVARCHAR(20)) END | 判定模式
+说明=判定模式：1系统自动判定、2用户人为判定
+列=CASE qir.CDECISION_MODE WHEN 1 THEN N'系统自动判定' WHEN 2 THEN N'用户人为判定' ELSE CAST(qir.CDECISION_MODE AS NVARCHAR(20)) END | 判定模式
 禁止=qir.CDECISION_MODE AS [判定模式]
 
 [映射 result]
 字段=CRESULT
 类型=枚举
-说明=枚举译码：检验结果：1合格、2不合格
-列=CASE qir.CRESULT WHEN 1 THEN N'合格、2不合格' WHEN 2 THEN N'不合格' ELSE CAST(qir.CRESULT AS NVARCHAR(20)) END | 检验结果
+说明=检验结果：1合格、2不合格
+列=CASE qir.CRESULT WHEN 1 THEN N'合格' WHEN 2 THEN N'不合格' ELSE CAST(qir.CRESULT AS NVARCHAR(20)) END | 检验结果
 禁止=qir.CRESULT AS [检验结果]
 
 [映射 status]
 字段=CSTATUS
 类型=枚举
-说明=枚举译码：状态：0待检验、1已检验待审核、2审核通过、3审核驳回
-列=CASE qir.CSTATUS WHEN 0 THEN N'待检验、1已检验待审核、2审核通过、3审核驳回' WHEN 1 THEN N'已检验待审核' WHEN 2 THEN N'审核通过' WHEN 3 THEN N'审核驳回' ELSE CAST(qir.CSTATUS AS NVARCHAR(20)) END | 状态
+说明=状态：0待检验、1已检验待审核、2审核通过、3审核驳回
+列=CASE qir.CSTATUS WHEN 0 THEN N'待检验' WHEN 1 THEN N'已检验待审核' WHEN 2 THEN N'审核通过' WHEN 3 THEN N'审核驳回' ELSE CAST(qir.CSTATUS AS NVARCHAR(20)) END | 状态
 禁止=qir.CSTATUS AS [状态]
+
+[映射 inspect_type]
+字段=CINSPECT_TYPE
+类型=枚举
+说明=检验类型：1首件、2巡检
+列=CASE qir.CINSPECT_TYPE WHEN 1 THEN N'首件' WHEN 2 THEN N'巡检' ELSE CAST(qir.CINSPECT_TYPE AS NVARCHAR(20)) END | 检验类型
+禁止=qir.CINSPECT_TYPE AS [检验类型]
 
 [映射 check_user]
 字段=CCHECK_USER_NAME
@@ -317,8 +326,8 @@
 字段=CINSPECT_USER_NAME
 类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = qir.CINSPECT_USER_NAME
-列=qir.CINSPECT_USER_NAME | 检验人，对应TBL_SYS_USER.CUSER_NAME账号
-列=sysus.CDISPLAY_NAME | 检验人，对应TBL_SYS_USER.CUSER_NAME姓名
+列=qir.CINSPECT_USER_NAME | 检验人账号
+列=sysus.CDISPLAY_NAME | 检验人姓名
 
 [映射 item]
 字段=CITEM_ID
@@ -331,15 +340,15 @@
 字段=CLAB_INSPECT_USER_NAME
 类型=账号
 关联=sysus2 | TBL_SYS_USER | sysus2.CUSER_NAME = qir.CLAB_INSPECT_USER_NAME
-列=qir.CLAB_INSPECT_USER_NAME | 实验室检验人，对应TBL_SYS_USER.CUSER_NAME账号
-列=sysus2.CDISPLAY_NAME | 实验室检验人，对应TBL_SYS_USER.CUSER_NAME姓名
+列=qir.CLAB_INSPECT_USER_NAME | 实验室检验人账号
+列=sysus2.CDISPLAY_NAME | 实验室检验人姓名
 
 [映射 lab_receive_user_name_to_sys_user]
 字段=CLAB_RECEIVE_USER_NAME
 类型=账号
 关联=sysus3 | TBL_SYS_USER | sysus3.CUSER_NAME = qir.CLAB_RECEIVE_USER_NAME
-列=qir.CLAB_RECEIVE_USER_NAME | 实验室接收人，对应TBL_SYS_USER.CUSER_NAME账号
-列=sysus3.CDISPLAY_NAME | 实验室接收人，对应TBL_SYS_USER.CUSER_NAME姓名
+列=qir.CLAB_RECEIVE_USER_NAME | 实验室接收人账号
+列=sysus3.CDISPLAY_NAME | 实验室接收人姓名
 
 [映射 process]
 字段=CPROCESS_ID
@@ -363,7 +372,6 @@
 展示列=qir.CINSPECT_CODE | 检验单号
 展示列=qir.CINSPECT_QTY | 检验数量
 展示列=qir.CINSPECT_TIME | 检验时间
-展示列=qir.CINSPECT_TYPE | 检验类型
 展示列=qir.CIS_LAB | 是否送实验室
 展示列=qir.CLAB_INSPECT_REMARK | 实验室检验备注
 展示列=qir.CLAB_INSPECT_TIME | 实验室检验时间
@@ -684,9 +692,9 @@
 [映射 item_no_to_mo_outs]
 字段=CITEM_NO
 关联=moout | TBL_MO_OUTS | moout.CITEM_NO = bi.CITEM_NO
-列=moout.CMO_LOT | 工单批次号，对应TBL_MO.CMO_LOT
-列=moout.COS_NO | 外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号
-列=moout.CSO_NO | 销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号
+列=moout.CMO_LOT | 工单批次
+列=moout.COS_NO | 外协订单号
+列=moout.CSO_NO | 销售订单号
 
 [映射 item_no_to_oqc_shipment]
 字段=CITEM_NO
@@ -1478,9 +1486,16 @@
 [映射 status]
 字段=CSTATUS
 类型=枚举
-说明=枚举译码：状态，1：可用；0：不可用
-列=CASE egp.CSTATUS WHEN 1 THEN N'可用；0：不可用' WHEN 0 THEN N'不可用' ELSE CAST(egp.CSTATUS AS NVARCHAR(20)) END | 状态
+说明=状态：1可用、0不可用
+列=CASE egp.CSTATUS WHEN 1 THEN N'可用' WHEN 0 THEN N'不可用' ELSE CAST(egp.CSTATUS AS NVARCHAR(20)) END | 状态
 禁止=egp.CSTATUS AS [状态]
+
+[映射 param_status]
+字段=CPARAM_STATUS
+类型=枚举
+说明=参数状态：TESTPLATE试板参数、PRODUCTION生产参数
+列=CASE UPPER(RTRIM(egp.CPARAM_STATUS)) WHEN 'TESTPLATE' THEN N'试板参数' WHEN 'PRODUCTION' THEN N'生产参数' ELSE egp.CPARAM_STATUS END | 参数状态
+禁止=egp.CPARAM_STATUS AS [参数状态]
 
 [映射 item_no_to_bd_item]
 字段=CITEM_NO
@@ -1494,7 +1509,6 @@
 展示列=egp.CCU_DEN | 铜密度
 展示列=egp.CCU_TIME | 铜时间
 展示列=egp.CFB | A/B挂
-展示列=egp.CPARAM_STATUS | 参数状态  => 试板参数: TESTPLATE   生产参数: PRODUCTION
 展示列=egp.CPART_NUM | 制造部件
 展示列=egp.CREMARK | 备注
 展示列=egp.CSN_DEN | 锡密度
@@ -1646,27 +1660,28 @@
 列=mo.CORDER_NO | 工单编号
 列=mo.CMO_LOT | 工单批次
 
-展示列=ehp.CDATETIME_CREATED | 创建时间（datetime类型，允许为空）
-展示列=ehp.CDATETIME_MODIFIED | 修改时间（datetime类型，允许为空）
-展示列=ehp.CDistA1A2 | AIA2靶距（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDistA1B1 | AIB1靶距（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDistA1C1_X | A1C1 X距离（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDistA1C1_Y | A1C1 Y距离（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDistC1C2 | CIC2靶距（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDistC1D1 | CID1靶距（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CDrillstyle | 钻靶型式（varchar类型，长度50，允许为空）
-展示列=ehp.CENTERPRISE_CODE | 企业编码（bigint类型，允许为空）
-展示列=ehp.CFrontToA1A2 | AIA2至板前缘（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CINSTANCE_ID | 实例ID（varchar类型，长度256，允许为空）
-展示列=ehp.CJobname | 料号（varchar类型，长度50，允许为空）
-展示列=ehp.CLength | 板长（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CORG_CODE | 组织编码（bigint类型，允许为空）
-展示列=ehp.Count | 数量（int类型，允许为空）
-展示列=ehp.CRecipetime | 配方生成时间戳（varchar类型，长度50，允许为空）
-展示列=ehp.CROWREMARK | 行备注（varchar(max)类型，允许为空，可存储长文本）
-展示列=ehp.CSTATE | 状态（char类型，长度1，允许为空）
-展示列=ehp.CThickness | 板厚（decimal类型，精度18位，小数位6位，允许为空）
-展示列=ehp.CWidth | 板宽（decimal类型，精度18位，小数位6位，允许为空）
+展示列=ehp.CDATETIME_CREATED | 创建时间
+展示列=ehp.CDATETIME_MODIFIED | 修改时间
+展示列=ehp.CDistA1A2 | AIA2靶距
+展示列=ehp.CDistA1B1 | AIB1靶距
+展示列=ehp.CDistA1C1_X | A1C1 X距离
+展示列=ehp.CDistA1C1_Y | A1C1 Y距离
+展示列=ehp.CDistC1C2 | CIC2靶距
+展示列=ehp.CDistC1D1 | CID1靶距
+展示列=ehp.CDrillstyle | 钻靶型式
+展示列=ehp.CENTERPRISE_CODE | 企业编码
+展示列=ehp.CFrontToA1A2 | AIA2至板前缘
+展示列=ehp.CINSTANCE_ID | 实例ID
+展示列=ehp.CJobname | 料号
+展示列=ehp.CLength | 板长
+展示列=ehp.CLot_NO | 批次号
+展示列=ehp.CORG_CODE | 组织编码
+展示列=ehp.Count | 数量
+展示列=ehp.CRecipetime | 配方生成时间
+展示列=ehp.CROWREMARK | 行备注
+展示列=ehp.CSTATE | 状态
+展示列=ehp.CThickness | 板厚
+展示列=ehp.CWidth | 板宽
 
 [表 TBL_EAP_HEARTBEAT]
 标签=放板机心跳记录
@@ -1820,8 +1835,8 @@
 [映射 status]
 字段=CSTATUS
 类型=枚举
-说明=枚举译码：状态，1：可用；0：不可用
-列=CASE elp.CSTATUS WHEN 1 THEN N'可用；0：不可用' WHEN 0 THEN N'不可用' ELSE CAST(elp.CSTATUS AS NVARCHAR(20)) END | 状态
+说明=状态：1可用、0不可用
+列=CASE elp.CSTATUS WHEN 1 THEN N'可用' WHEN 0 THEN N'不可用' ELSE CAST(elp.CSTATUS AS NVARCHAR(20)) END | 状态
 禁止=elp.CSTATUS AS [状态]
 
 [映射 item_no_to_bd_item]
@@ -2539,8 +2554,8 @@
 [映射 ountersign]
 字段=CCOUNTERSIGN
 类型=枚举
-说明=枚举译码：会签状态：1：会签完成；0：未会签
-列=CASE etc.CCOUNTERSIGN WHEN 1 THEN N'会签完成；0：未会签' WHEN 0 THEN N'未会签' ELSE CAST(etc.CCOUNTERSIGN AS NVARCHAR(20)) END | 会签状态
+说明=会签状态：1会签完成、0未会签
+列=CASE etc.CCOUNTERSIGN WHEN 1 THEN N'会签完成' WHEN 0 THEN N'未会签' ELSE CAST(etc.CCOUNTERSIGN AS NVARCHAR(20)) END | 会签状态
 禁止=etc.CCOUNTERSIGN AS [会签状态]
 
 [映射 review_result]
@@ -2614,7 +2629,7 @@
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = ftk.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=ftk.CCLKJ | 测量孔径
 展示列=ftk.CT_DATA1 | 测量值1
@@ -2696,6 +2711,32 @@
 列=bdite.CITEM_NAME | 品名
 列=CASE UPPER(RTRIM(bdite.CTYPE)) WHEN 'MERGER' THEN N'合拼' WHEN 'SAMPLE' THEN N'样本' WHEN 'BATCH' THEN N'批量生产' ELSE bdite.CTYPE END | 类型
 
+[映射 result_zkcs]
+字段=CRESULT_ZKCS
+类型=枚举
+说明=阻抗测试判定：ACC/OK通过、REJ不通过
+列=CASE UPPER(RTRIM(ftm.CRESULT_ZKCS)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_ZKCS END | 阻抗测试判定结果
+
+[映射 result_kthd]
+字段=CRESULT_KTHD
+类型=枚举
+列=CASE UPPER(RTRIM(ftm.CRESULT_KTHD)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_KTHD END | 孔铜厚度判定结果
+
+[映射 result_qpbt]
+字段=CRESULT_QPBT
+类型=枚举
+列=CASE UPPER(RTRIM(ftm.CRESULT_QPBT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_QPBT END | 切片表铜判定结果
+
+[映射 result_skkj]
+字段=CRESULT_SKKJ
+类型=枚举
+列=CASE UPPER(RTRIM(ftm.CRESULT_SKKJ)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_SKKJ END | 蚀刻孔径判定结果
+
+[映射 result_skxk]
+字段=CRESULT_SKXK
+类型=枚举
+列=CASE UPPER(RTRIM(ftm.CRESULT_SKXK)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_SKXK END | 蚀刻线宽判定结果
+
 展示列=ftm.CAGV_CCOPER | 平均铜厚
 展示列=ftm.CAUDIT_DESC | 审核描述
 展示列=ftm.CAUDIT_TIME | 审核时间
@@ -2726,11 +2767,6 @@
 展示列=ftm.CMIN_LINE_SPACE | 最小线距
 展示列=ftm.CMIN_LINE_WIDE | 最小线宽
 展示列=ftm.CPLANK_QTY | 挂板数量
-展示列=ftm.CRESULT_KTHD | 孔铜厚度：判定结果；ACC：通过；REJ：不通过
-展示列=ftm.CRESULT_QPBT | 切片表铜：判定结果；ACC：通过；REJ：不通过
-展示列=ftm.CRESULT_SKKJ | 蚀刻后孔径测量：判定结果；ACC：通过；REJ：不通过
-展示列=ftm.CRESULT_SKXK | 蚀刻后线宽：判定结果；ACC：通过；REJ：不通过
-展示列=ftm.CRESULT_ZKCS | 阻抗测试：判定结果；ACC：通过；REJ：不通过
 展示列=ftm.CSAMPLE_QTY | 抽样数量
 展示列=ftm.CSIZE | 尺寸
 展示列=ftm.CSS_CCOPER | S/S铜厚
@@ -2751,10 +2787,17 @@
 列=sysus.CDISPLAY_NAME | 用户姓名
 列=sysus.CUSER_NAME | 用户账号
 
+[映射 result_acc_rej]
+字段=CRESULT
+类型=枚举
+说明=判定结果：ACC/OK通过、REJ不通过
+列=CASE UPPER(RTRIM(ftq.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftq.CRESULT END | 判定结果
+禁止=ftq.CRESULT AS [判定结果]
+
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = ftq.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=ftq.CBMTH1 | 表铜厚度1
 展示列=ftq.CBMTH2 | 表铜厚度2
@@ -2770,23 +2813,28 @@
 展示列=ftq.CKNTHD | 孔内铜厚D
 展示列=ftq.CKNTHE | 孔内铜厚E
 展示列=ftq.CKNTHF | 孔内铜厚F
-展示列=ftq.CRESULT | 判定结果；ACC：通过；REJ：不通过
 
 [表 TBL_FA_TXDD_SKKJ]
 标签=图形电镀蚀刻后孔径测量
 关键词=图形电镀蚀刻后孔径测量
 别名=fts
 
+[映射 result_acc_rej]
+字段=CRESULT
+类型=枚举
+说明=判定结果：ACC/OK通过、REJ不通过
+列=CASE UPPER(RTRIM(fts.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE fts.CRESULT END | 判定结果
+禁止=fts.CRESULT AS [判定结果]
+
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = fts.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=fts.CDRILL_BIT | 钻咀规格
 展示列=fts.CMEASURED | 实测值
 展示列=fts.CPRODUCT | 产品标准值
 展示列=fts.CREMARK | 备注
-展示列=fts.CRESULT | 判定结果；ACC：通过；REJ：不通过
 展示列=fts.CTOLERANCE | 公差
 
 [表 TBL_FA_TXDD_SKXK]
@@ -2797,7 +2845,7 @@
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = fts.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=fts.CBGAJX_SC | BGA间隙实测
 展示列=fts.CBGAJX_YQ | BGA间隙要求
@@ -2823,7 +2871,7 @@
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = ftx.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=ftx.CX_DATA1 | 锡厚数据1
 展示列=ftx.CX_DATA2 | 锡厚数据2
@@ -2836,15 +2884,21 @@
 关键词=图形电镀阻抗测试
 别名=ftz
 
+[映射 result_acc_rej]
+字段=CRESULT
+类型=枚举
+说明=判定结果：ACC/OK通过、REJ不通过
+列=CASE UPPER(RTRIM(ftz.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftz.CRESULT END | 判定结果
+禁止=ftz.CRESULT AS [判定结果]
+
 [映射 main_id_to_fa_txdd_main]
 字段=CMAIN_ID
 关联=fatxd | TBL_FA_TXDD_MAIN | fatxd.CID = ftz.CMAIN_ID
-列=fatxd.CITEM_NO | 料号，对应TBL_BD_ITEM.CITEM_NO
+列=fatxd.CITEM_NO | 料号
 
 展示列=ftz.CLEVEL | 层别
 展示列=ftz.CMEASURED | 实测值
 展示列=ftz.CREMARK | 备注
-展示列=ftz.CRESULT | 判定结果；ACC：通过；REJ：不通过
 展示列=ftz.CSTANDARD | 标准值
 展示列=ftz.CTOLERANCE | 公差
 
@@ -2949,19 +3003,31 @@
 
 [表 TBL_FOURM_CHANGE_ITEM_LOG]
 标签=4M变更料号日志表
-关键词=4M变更料号日志表
+关键词=4M变更料号日志表,4M变更料号
 别名=fci
 
 [映射 fourm_id_to_esop_tempora]
 字段=CFOURM_ID
 关联=esopt | TBL_ESOP_TEMPORARY_CHANGE_ORDER | esopt.CID = fci.CFOURM_ID
-列=esopt.CAPPLICANT_NAME | 申请人，对应TBL_SYS_USER.CUSER_NAME
+列=esopt.CAPPLICANT_NAME | 申请人
 列=esopt.CAPPLICANT_NO | 申请编号
 列=esopt.CERP_FILE_NO | ERP文件
-列=esopt.CINVOLVED_ITEM_NO | 涉及料号，对应TBL_BD_ITEM.CITEM_NO
+列=esopt.CINVOLVED_ITEM_NO | 涉及料号
+列=CASE esopt.CCOUNTERSIGN WHEN 1 THEN N'会签完成' WHEN 0 THEN N'未会签' ELSE CAST(esopt.CCOUNTERSIGN AS NVARCHAR(20)) END | 会签状态
+列=CASE esopt.CREVIEW_RESULT WHEN 1 THEN N'同意' WHEN 2 THEN N'不同意' ELSE CAST(esopt.CREVIEW_RESULT AS NVARCHAR(20)) END | 审核结果
 
-展示列=fci.CAFTER_ITEM | 变更后板材料号，对应TBL_BD_ITEM.CITEM_NO
-展示列=fci.CBEFOR_ITEM | 变更前板材料号，对应TBL_BD_ITEM.CITEM_NO
+[映射 after_item_to_bd_item]
+字段=CAFTER_ITEM
+关联=bd_a | TBL_BD_ITEM | bd_a.CITEM_NO = fci.CAFTER_ITEM
+列=fci.CAFTER_ITEM | 变更后板材料号
+列=bd_a.CITEM_NAME | 变更后品名
+
+[映射 before_item_to_bd_item]
+字段=CBEFOR_ITEM
+关联=bd_b | TBL_BD_ITEM | bd_b.CITEM_NO = fci.CBEFOR_ITEM
+列=fci.CBEFOR_ITEM | 变更前板材料号
+列=bd_b.CITEM_NAME | 变更前品名
+
 展示列=fci.CPART | 部件
 
 [表 TBL_MD_DATASET]
@@ -2986,7 +3052,7 @@
 
 [表 TBL_MO_BARCODE_PROD_LINK]
 标签=工单与条码生产关联表
-关键词=工单与条码生产关联表
+关键词=工单与条码生产关联表,工单与条码,条码生产关联
 别名=mbp
 
 [映射 barcode_id_to_wms_item_bar]
@@ -3002,6 +3068,8 @@
 关联=mo | TBL_MO | mo.CID = mbp.CMO_ID
 列=mo.CORDER_NO | 工单编号
 列=mo.CMO_LOT | 工单批次
+列=CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END | 工单状态
+禁止=mo.CSTATUS AS [工单状态]
 
 [映射 process]
 字段=CPROCESS_ID
@@ -3014,26 +3082,26 @@
 
 [表 TBL_MO_OUTS]
 标签=外协工单信息表
-关键词=外协工单信息表
-别名=mo
+关键词=外协工单信息表,外协工单
+别名=moout
 
 [映射 item_no_to_bd_item]
 字段=CITEM_NO
-关联=bdite | TBL_BD_ITEM | bdite.CITEM_NO = mo.CITEM_NO
-列=bdite.CITEM_NO | 料号
+关联=bdite | TBL_BD_ITEM | bdite.CITEM_NO = moout.CITEM_NO
+列=moout.CITEM_NO | 料号
 列=bdite.CITEM_NAME | 品名
 列=CASE UPPER(RTRIM(bdite.CTYPE)) WHEN 'MERGER' THEN N'合拼' WHEN 'SAMPLE' THEN N'样本' WHEN 'BATCH' THEN N'批量生产' ELSE bdite.CTYPE END | 类型
 
 [映射 mo_lot]
 字段=CMO_LOT
-关联=mo | TBL_MO | mo.CMO_LOT = mo.CMO_LOT
-列=mo.CORDER_NO | 工单编号
-列=mo.CMO_LOT | 工单批次
-列=CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END | 工单状态
+关联=m | TBL_MO | m.CMO_LOT = moout.CMO_LOT
+列=m.CORDER_NO | 工单编号
+列=m.CMO_LOT | 工单批次
+列=CASE m.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(m.CSTATUS AS NVARCHAR(20)) END | 工单状态
 
-展示列=mo.COS_NO | 外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号
-展示列=mo.CQTY | 数量
-展示列=mo.CSO_NO | 销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号
+展示列=moout.COS_NO | 外协订单号
+展示列=moout.CSO_NO | 销售订单号
+展示列=moout.CQTY | 数量
 
 [表 TBL_MSG_EVENT]
 标签=消息事件表
@@ -3529,8 +3597,9 @@
 
 [表 TBL_QM_ASSAY_LOG]
 标签=化验任务记录表
-关键词=化验任务记录表
+关键词=化验任务记录表,化验任务记录,化验任务,药水化验
 别名=qal
+默认排序=COALESCE(qal.CASSAY_TIME, qal.CSAMPLE_TIME, qal.CRECEIVE_TIME, qal.CTASK_STAND_TIME_S) DESC, qal.CID DESC
 
 [映射 assay_result]
 字段=CASSAY_RESULT
@@ -3542,16 +3611,24 @@
 [映射 assay_status]
 字段=CASSAY_STATUS
 类型=枚举
-说明=枚举译码：化验状态：1：已化验、0：未化验
-列=CASE qal.CASSAY_STATUS WHEN 1 THEN N'已化验' WHEN 0 THEN N'未化验' ELSE CAST(qal.CASSAY_STATUS AS NVARCHAR(20)) END | 化验状态
+说明=化验流程状态（现场除0/1外常见2~5；5与已审核任务一致，译码为已审核）。勿仅用文档0/1两项
+列=CASE qal.CASSAY_STATUS WHEN 0 THEN N'待取样' WHEN 1 THEN N'待接收' WHEN 2 THEN N'待化验' WHEN 3 THEN N'化验中' WHEN 4 THEN N'待审核' WHEN 5 THEN N'已审核' ELSE CAST(qal.CASSAY_STATUS AS NVARCHAR(20)) END | 化验状态
 禁止=qal.CASSAY_STATUS AS [化验状态]
+
+[映射 task_type]
+字段=CTASK_TYPE
+类型=枚举
+说明=任务类型：1常规化验、2异常化验（现场CTASK_TYPE取值）
+列=CASE qal.CTASK_TYPE WHEN 1 THEN N'常规化验' WHEN 2 THEN N'异常化验' ELSE CAST(qal.CTASK_TYPE AS NVARCHAR(20)) END | 任务类型
+禁止=qal.CTASK_TYPE AS [任务类型]
+禁止=CAST(qal.CTASK_TYPE AS NVARCHAR(20)) AS [任务类型]
 
 [映射 heck_status]
 字段=CCHECK_STATUS
 类型=枚举
 说明=枚举译码：审核状态1：已审核、0：未审核
-列=CASE qal.CCHECK_STATUS WHEN 1 THEN N'已审核' WHEN 0 THEN N'未审核' ELSE CAST(qal.CCHECK_STATUS AS NVARCHAR(20)) END | CCHECK_STATUS
-禁止=qal.CCHECK_STATUS AS [CCHECK_STATUS]
+列=CASE qal.CCHECK_STATUS WHEN 1 THEN N'已审核' WHEN 0 THEN N'未审核' ELSE CAST(qal.CCHECK_STATUS AS NVARCHAR(20)) END | 审核状态
+禁止=qal.CCHECK_STATUS AS [审核状态]
 
 [映射 is_open_line]
 字段=CIS_OPEN_LINE
@@ -3563,8 +3640,8 @@
 [映射 task_status]
 字段=CTASK_STATUS
 类型=枚举
-说明=枚举译码：任务状态：1：已执行、0：未执行
-列=CASE qal.CTASK_STATUS WHEN 1 THEN N'已执行' WHEN 0 THEN N'未执行' ELSE CAST(qal.CTASK_STATUS AS NVARCHAR(20)) END | 任务状态
+说明=化验任务状态：0待执行、1已执行、2已关闭
+列=CASE qal.CTASK_STATUS WHEN 0 THEN N'待执行' WHEN 1 THEN N'已执行' WHEN 2 THEN N'已关闭' ELSE CAST(qal.CTASK_STATUS AS NVARCHAR(20)) END | 任务状态
 禁止=qal.CTASK_STATUS AS [任务状态]
 
 [映射 assay_user_to_sys_user]
@@ -3577,8 +3654,8 @@
 [映射 heck_user_to_sys_user]
 字段=CCHECK_USER
 关联=sysus2 | TBL_SYS_USER | sysus2.CUSER_NAME = qal.CCHECK_USER
-列=sysus2.CDISPLAY_NAME | 用户姓名
-列=sysus2.CUSER_NAME | 用户账号
+列=qal.CCHECK_USER | 审核人账号
+列=sysus2.CDISPLAY_NAME | 审核人姓名
 
 [映射 medicine_tank_id_to_qm_medicine_]
 字段=CMEDICINE_TANK_ID
@@ -3589,14 +3666,14 @@
 [映射 receive_user_to_sys_user]
 字段=CRECEIVE_USER
 关联=sysus3 | TBL_SYS_USER | sysus3.CUSER_NAME = qal.CRECEIVE_USER
-列=sysus3.CDISPLAY_NAME | 用户姓名
-列=sysus3.CUSER_NAME | 用户账号
+列=qal.CRECEIVE_USER | 接收人账号
+列=sysus3.CDISPLAY_NAME | 接收人姓名
 
 [映射 sample_user_to_sys_user]
 字段=CSAMPLE_USER
 关联=sysus4 | TBL_SYS_USER | sysus4.CUSER_NAME = qal.CSAMPLE_USER
-列=sysus4.CDISPLAY_NAME | 用户姓名
-列=sysus4.CUSER_NAME | 用户账号
+列=qal.CSAMPLE_USER | 取样人账号
+列=sysus4.CDISPLAY_NAME | 取样人姓名
 
 [映射 work_center]
 字段=CWC_ID
@@ -3622,7 +3699,6 @@
 展示列=qal.CTASK_STAND_TIME_E | 任务标准结束时间
 展示列=qal.CTASK_STAND_TIME_S | 任务标准开始时间
 展示列=qal.CTASK_TAG | 任务标签
-展示列=qal.CTASK_TYPE | 任务类型
 展示列=qal.CID | 主键
 
 [表 TBL_QM_ASSAY_LOG_ITEM]
@@ -4145,37 +4221,45 @@
 
 [映射 user_name_to_sys_user]
 字段=CUSER_NAME
+类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = sdu.CUSER_NAME
+列=sdu.CUSER_NAME | 用户账号
 列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
 
-展示列=sdu.CDEVICE_NO | 设备编码， 值为RR01、RR02、RR03
+展示列=sdu.CDEVICE_NO | 设备编码
 
 [表 TBL_SFC_PACKAGE]
 标签=包装信息表
-关键词=包装信息表
+关键词=包装信息表,包装
 别名=sp
+默认排序=sp.CPACKING_TIME DESC
 
 [映射 inventory_status]
 字段=CINVENTORY_STATUS
 类型=枚举
-说明=枚举译码：库存状态，0待提交、1待入库、2已入库、3已出库
-列=CASE sp.CINVENTORY_STATUS WHEN 0 THEN N'待提交、1待入库、2已入库、3已出库' WHEN 1 THEN N'待入库' WHEN 2 THEN N'已入库' WHEN 3 THEN N'已出库' ELSE CAST(sp.CINVENTORY_STATUS AS NVARCHAR(20)) END | 库存状态
+说明=库存状态：0待提交、1待入库、2已入库、3已出库
+列=CASE sp.CINVENTORY_STATUS WHEN 0 THEN N'待提交' WHEN 1 THEN N'待入库' WHEN 2 THEN N'已入库' WHEN 3 THEN N'已出库' ELSE CAST(sp.CINVENTORY_STATUS AS NVARCHAR(20)) END | 库存状态
 禁止=sp.CINVENTORY_STATUS AS [库存状态]
 
 [映射 is_reprint]
 字段=CIS_REPRINT
 类型=枚举
-说明=枚举译码：是否补打，0非补打、1补打
-列=CASE sp.CIS_REPRINT WHEN 0 THEN N'非补打、1补打' WHEN 1 THEN N'补打' ELSE CAST(sp.CIS_REPRINT AS NVARCHAR(20)) END | 是否补打
+说明=是否补打：0非补打、1补打
+列=CASE UPPER(RTRIM(CAST(sp.CIS_REPRINT AS NVARCHAR(10)))) WHEN '0' THEN N'非补打' WHEN '1' THEN N'补打' ELSE sp.CIS_REPRINT END | 是否补打
 禁止=sp.CIS_REPRINT AS [是否补打]
 
 [映射 level]
 字段=CLEVEL
 类型=枚举
-说明=枚举译码：包装层级，1内包、2外包
-列=CASE sp.CLEVEL WHEN 1 THEN N'内包、2外包' WHEN 2 THEN N'外包' ELSE CAST(sp.CLEVEL AS NVARCHAR(20)) END | 包装层级
+说明=包装层级：1内包、2外包
+列=CASE sp.CLEVEL WHEN 1 THEN N'内包' WHEN 2 THEN N'外包' ELSE CAST(sp.CLEVEL AS NVARCHAR(20)) END | 包装层级
 禁止=sp.CLEVEL AS [包装层级]
+
+[映射 status]
+字段=CSTATUS
+关联=sysdic | TBL_SYS_DICTIONARY | sysdic.CDIC_CODE = sp.CSTATUS
+列=COALESCE(NULLIF(RTRIM(sysdic.CDIC_DESC), ''), NULLIF(RTRIM(sysdic.CDIC_NAME), ''), sp.CSTATUS) | 状态
+禁止=sp.CSTATUS AS [状态]
 
 [映射 ustomer_code_to_bd_customer]
 字段=CCUSTOMER_CODE
@@ -4210,7 +4294,7 @@
 展示列=sp.CNET_WEIGHT | 净重
 展示列=sp.CPACKING_TIME | 包装时间
 展示列=sp.CPARAM_VALUE | 参数值（板厚）
-展示列=sp.CPARENT_ID | 父级包装ID，对应TBL_SFC_PACKAGE.CID
+展示列=sp.CPARENT_ID | 父级包装ID
 展示列=sp.CQTY | 数量
 展示列=sp.CREMARK | 备注
 展示列=sp.CSALES_ORDER | 销售订单
@@ -4218,14 +4302,13 @@
 展示列=sp.CSET_X_QTY | SET叉板数
 展示列=sp.CSOURCE_BARCODE | 补打前的箱号
 展示列=sp.CSPLIT_DATETIME | 拆分时间
-展示列=sp.CSPLIT_ID | 拆分前的上级条码ID，对应TBL_SFC_PACKAGE.CID
-展示列=sp.CSTATUS | 状态，来源数据字典TBL_SYS_DICTIONARY.CDIC_CODE
+展示列=sp.CSPLIT_ID | 拆分上级条码ID
 展示列=sp.CWEIGHT | 毛重
 展示列=sp.CX_QTY | 叉板数
-展示列=sp.EXPAND1 | 扩展字段1（内箱3045流水号）
+展示列=sp.EXPAND1 | 内箱3045流水号
 展示列=sp.ScrapDateTime | 报废时间
-展示列=sp.ScrapUser | 报废人，对应TBL_SYS_UER.CUSER_NAME
-展示列=sp.XOUT | 叉板数
+展示列=sp.ScrapUser | 报废人
+展示列=sp.XOUT | XOUT叉板数
 展示列=sp.CID | 主键ID
 
 [表 TBL_SFC_PACKAGE_LABEL_LINK]
@@ -4256,19 +4339,26 @@
 
 [表 TBL_SFC_PACKAGE_LOG]
 标签=包装操作日志表
-关键词=包装操作日志表
-别名=spl
+关键词=包装操作日志表,包装操作日志,包装日志
+别名=spkgl
 
 [映射 barcode_to_sfc_package]
 字段=CBARCODE
-关联=sfcpa | TBL_SFC_PACKAGE | sfcpa.CBARCODE = spl.CBARCODE
+关联=sfcpa | TBL_SFC_PACKAGE | sfcpa.CBARCODE = spkgl.CBARCODE
+列=sfcpa.CBARCODE | 包装条码
 列=sfcpa.CBATCH_NUMBER | 包装批次号
-列=sfcpa.CCUSTOMER_CODE | 客户编码，对应TBL_BD_CUSTOMER.CUSTOMER_NO
+列=sfcpa.CCUSTOMER_CODE | 客户编码
 列=sfcpa.CCUSTOMER_ITEM_NAME | 客户品名
 列=sfcpa.CCUSTOMER_ITEM_NO | 客户料号
 
-展示列=spl.COPERATE_TYPE | 操作类型代码
-展示列=spl.CREMARK | 备注，描述具体的操作类型
+[映射 operate_type]
+字段=COPERATE_TYPE
+关联=sysdic_op | TBL_SYS_DICTIONARY | sysdic_op.CDIC_CODE = CONCAT(N'PACKAGE_OPERATE_TYPE_', CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20))) OR (sysdic_op.CDIC_VALUE = CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20)) AND RTRIM(sysdic_op.CPARENT) = N'PACKAGE_OPERATE_TYPE')
+列=COALESCE(NULLIF(RTRIM(sysdic_op.CDIC_DESC), ''), NULLIF(RTRIM(sysdic_op.CDIC_NAME), ''), CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20))) | 操作类型
+禁止=spkgl.COPERATE_TYPE AS [操作类型]
+禁止=spkgl.COPERATE_TYPE AS [操作类型代码]
+
+展示列=spkgl.CREMARK | 备注
 
 [表 TBL_SFC_PACKAGE_RULE_EXT]
 标签=包装规则扩展配置表
@@ -5015,21 +5105,38 @@
 
 [表 TBL_SRM_RECEIVING]
 标签=收货单主表
-关键词=收货单主表
+关键词=收货单主表,收货单,查询收货单
 别名=sr
+默认排序=sr.CRECEIVING_DATE DESC, sr.CID DESC
 
 [映射 status]
 字段=CSTATUS
 类型=枚举
-说明=状态码译码：状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中
-列=CASE UPPER(RTRIM(sr.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' ELSE sr.CSTATUS END | 状态
+说明=状态码译码：状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库
+列=CASE UPPER(RTRIM(sr.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE sr.CSTATUS END | 状态
 禁止=sr.CSTATUS AS [状态]
+
+[映射 receiving_dtl_lines]
+字段=CID
+说明=查收货单含明细行时 JOIN 明细；状态须 CASE 译码，禁止 srd.CSTATUS 裸写
+关联=srd | TBL_SRM_RECEIVING_DTL | srd.CRECEIVING_ID = sr.CID
+列=srd.CPO_QTY | 采购数量
+列=srd.CRECEIVING_QTY | 收货数量
+列=srd.CGOOD_QTY | 合格数量
+列=srd.CINSOTCK_QTY | 入库数量
+列=CASE UPPER(RTRIM(srd.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srd.CSTATUS END | 状态
+禁止=srd.CSTATUS AS [状态]
+列=srd.CINSPECT_RESULT | 检验结果
+关联=sysus2 | TBL_SYS_USER | sysus2.CUSER_NAME = srd.CINSPECT_USER | 依赖=srd
+列=srd.CINSPECT_USER | 检验人账号
+列=sysus2.CDISPLAY_NAME | 检验人姓名
 
 [映射 receiving_user_to_sys_user]
 字段=CRECEIVING_USER
+类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = sr.CRECEIVING_USER
-列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
+列=sr.CRECEIVING_USER | 收货人账号
+列=sysus.CDISPLAY_NAME | 收货人姓名
 
 [映射 supplier]
 字段=CSUPPLIER_ID
@@ -5051,7 +5158,7 @@
 
 [表 TBL_SRM_RECEIVING_BARCODE]
 标签=收货单条码关联表
-关键词=收货单条码关联表
+关键词=收货单条码关联表,收货单条码,收货条码
 别名=srb
 
 [映射 barcode_to_wms_item_bar]
@@ -5069,17 +5176,34 @@
 列=srmre.CITEM_CODE | 物料编码
 列=srmre.CITEM_NAME | 物料名称
 列=srmre.CSOURCE_NO | 来源单号
+列=srmre.CDELIVER_QTY | 供应商送货数量
+列=srmre.CGOOD_QTY | 合格数量
+列=srmre.CINSOTCK_QTY | 入库数量
+列=srmre.CRECEIVING_QTY | 收货数量
+列=srmre.CRETURN_QTY | 退货数量
+列=srmre.CPO_QTY | 采购数量
+列=srmre.CINSPECT_RESULT | 检验结果
+列=CASE UPPER(RTRIM(srmre.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srmre.CSTATUS END | 状态
+禁止=srmre.CSTATUS AS [状态]
 
 [表 TBL_SRM_RECEIVING_DTL]
 标签=收货单明细表
-关键词=收货单明细表
+关键词=收货单明细表,收货单明细
 别名=srd
+
+[映射 status]
+字段=CSTATUS
+类型=枚举
+说明=状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库
+列=CASE UPPER(RTRIM(srd.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srd.CSTATUS END | 状态
+禁止=srd.CSTATUS AS [状态]
 
 [映射 inspect_user_to_sys_user]
 字段=CINSPECT_USER
+类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = srd.CINSPECT_USER
-列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
+列=srd.CINSPECT_USER | 检验人账号
+列=sysus.CDISPLAY_NAME | 检验人姓名
 
 [映射 item]
 字段=CITEM_ID
@@ -5148,14 +5272,14 @@
 展示列=srd.CSOURCE_ID | 来源ID
 展示列=srd.CSOURCE_NO | 来源单号
 展示列=srd.CSOURCE_TYPE | 来源类型
-展示列=srd.CSTATUS | 状态
 展示列=srd.CUNIT | 单位
 展示列=srd.CID | 主键
 
 [表 TBL_SYS_USER]
 标签=系统用户表
-关键词=系统用户表
+关键词=系统用户表,系统用户,用户表,用户列表
 别名=su
+默认排序=su.CDATETIME_LAST_LOGIN DESC
 
 [映射 org_code_to_sys_organiza]
 字段=CORG_CODE
@@ -5163,22 +5287,34 @@
 列=sysor.CORG_NAME | 组织名称
 列=sysor.CORG_NO | 组织编码
 
+[映射 is_locked_out]
+字段=CIS_LOCKED_OUT
+类型=枚举
+说明=是否锁定：Y是、N否
+列=CASE UPPER(RTRIM(su.CIS_LOCKED_OUT)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE su.CIS_LOCKED_OUT END | 是否锁定
+禁止=su.CIS_LOCKED_OUT AS [是否锁定]
+
+[映射 is_online]
+字段=CIS_ONLINE
+类型=枚举
+说明=是否在线：Y是、N否
+列=CASE UPPER(RTRIM(su.CIS_ONLINE)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE su.CIS_ONLINE END | 是否在线
+禁止=su.CIS_ONLINE AS [是否在线]
+
 展示列=su.CCUR_HOST | 当前登录主机
 展示列=su.CDATETIME_LAST_LOCKED_OUT | 最后锁定时间
 展示列=su.CDATETIME_LAST_LOGIN | 最后登录时间
 展示列=su.CDEFAULT_HOST | 默认登录主机
-展示列=su.CDISPLAY_NAME | 用户显示名
+展示列=su.CDISPLAY_NAME | 用户姓名
 展示列=su.CEMAIL | 邮箱
 展示列=su.CFAILED_ATTEMPT_COUNT | 登录失败次数
 展示列=su.CFAILED_ATTEMPT_START | 失败计数开始时间
 展示列=su.CGENDER | 性别
-展示列=su.CIS_LOCKED_OUT | 是否锁定
-展示列=su.CIS_ONLINE | 是否在线
 展示列=su.CMOBILEPHONE | 手机号
-展示列=su.CPASSWORD | 密码
 展示列=su.CUSER_NAME | 用户账号
 展示列=su.CUSER_TYPE | 用户类型
 展示列=su.CID | 主键
+禁止=su.CPASSWORD AS [密码]
 
 [表 TBL_SYS_USER_ORG_MAP]
 标签=用户组织关系
@@ -5367,7 +5503,7 @@
 字段=CSTATUS
 类型=枚举
 说明=枚举译码：1已入仓、2已出仓
-列=CASE wlr.CSTATUS WHEN 1 THEN N'已入仓、2已出仓' WHEN 2 THEN N'已出仓' ELSE CAST(wlr.CSTATUS AS NVARCHAR(20)) END | 状态
+列=CASE wlr.CSTATUS WHEN 1 THEN N'已入仓' WHEN 2 THEN N'已出仓' ELSE CAST(wlr.CSTATUS AS NVARCHAR(20)) END | 状态
 禁止=wlr.CSTATUS AS [状态]
 
 [映射 in_user_to_sys_user]
@@ -5436,21 +5572,23 @@
 
 [表 TBL_WMS_MANTISSA_RECORD]
 标签=尾数仓操作记录
-关键词=尾数仓操作记录
+关键词=尾数仓操作记录,尾数仓
 别名=wmr
+默认排序=COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC
 
 [映射 status]
 字段=CSTATUS
 类型=枚举
-说明=枚举译码：1已入仓、2已出仓
-列=CASE wmr.CSTATUS WHEN 1 THEN N'已入仓、2已出仓' WHEN 2 THEN N'已出仓' ELSE CAST(wmr.CSTATUS AS NVARCHAR(20)) END | 状态
+说明=状态：1已入仓、2已出仓
+列=CASE wmr.CSTATUS WHEN 1 THEN N'已入仓' WHEN 2 THEN N'已出仓' ELSE CAST(wmr.CSTATUS AS NVARCHAR(20)) END | 状态
 禁止=wmr.CSTATUS AS [状态]
 
 [映射 in_user_to_sys_user]
 字段=CIN_USER
+类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = wmr.CIN_USER
-列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
+列=wmr.CIN_USER | 入仓人账号
+列=sysus.CDISPLAY_NAME | 入仓人姓名
 
 [映射 item_name_to_bd_item]
 字段=CITEM_NAME
@@ -5466,9 +5604,10 @@
 
 [映射 out_user_to_sys_user]
 字段=COUT_USER
+类型=账号
 关联=sysus2 | TBL_SYS_USER | sysus2.CUSER_NAME = wmr.COUT_USER
-列=sysus2.CDISPLAY_NAME | 用户姓名
-列=sysus2.CUSER_NAME | 用户账号
+列=wmr.COUT_USER | 出仓人账号
+列=sysus2.CDISPLAY_NAME | 出仓人姓名
 
 [映射 warehouse]
 字段=CWAREHOUSE_ID
@@ -5486,14 +5625,15 @@
 
 [表 TBL_WMS_PICKING_LOG]
 标签=MES领料记录
-关键词=MES领料记录
+关键词=MES领料记录,领料记录,领料
 别名=wpl
 
 [映射 user_name_to_sys_user]
 字段=CUSER_NAME
+类型=账号
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = wpl.CUSER_NAME
-列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
+列=wpl.CUSER_NAME | 领料人账号
+列=sysus.CDISPLAY_NAME | 领料人姓名
 
 展示列=wpl.CPICKING_CODE | 领料单号
 展示列=wpl.CPICKING_QTY | 领料数量
@@ -5501,12 +5641,12 @@
 
 [表 TBL_WMS_PICKING_LOG_DTL]
 标签=领料记录明细
-关键词=领料记录明细
-别名=wpl
+关键词=领料记录明细,领料明细,领料人记录明细
+别名=wpld
 
 [映射 barcode_id_to_wms_item_bar]
 字段=CBARCODE_ID
-关联=wmsit | TBL_WMS_ITEM_BARCODE | wmsit.CID = wpl.CBARCODE_ID
+关联=wmsit | TBL_WMS_ITEM_BARCODE | wmsit.CID = wpld.CBARCODE_ID
 列=wmsit.CBARCODE | 物料条码
 列=wmsit.CBARCODE_TYPE | 条码类型
 列=wmsit.CERP_LOT_NO | ERP批次号
@@ -5514,12 +5654,14 @@
 
 [映射 picking_id_to_wms_picking_]
 字段=CPICKING_ID
-关联=wmspi | TBL_WMS_PICKING_LOG | wmspi.CID = wpl.CPICKING_ID
+关联=wmspi | TBL_WMS_PICKING_LOG | wmspi.CID = wpld.CPICKING_ID
+关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = wmspi.CUSER_NAME | 依赖=wmspi
 列=wmspi.CPICKING_CODE | 领料单号
-列=wmspi.CUSER_NAME | 领料人，对应TBL_SYS_USER.CUSER_NAME
+列=wmspi.CUSER_NAME | 领料人账号
+列=sysus.CDISPLAY_NAME | 领料人姓名
 
-展示列=wpl.CQTY | 领料数量
-展示列=wpl.CREMARK | 备注
+展示列=wpld.CQTY | 领料数量
+展示列=wpld.CREMARK | 备注
 
 [表 TBL_WMS_STOCK_BARCODE_LINK]
 标签=ERP库存与打印条码关联表

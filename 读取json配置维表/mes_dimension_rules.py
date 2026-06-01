@@ -163,6 +163,7 @@ _STATUS_FIELD_DISAMBIG: Dict[str, str] = {
     "TBL_MO": "工单发放状态（2已发放/5已取消/6已暂停/7外协）→ 列名 [工单状态]",
     "TBL_EAM_REPAIR": "维修工单状态（英文码）→ 列名 [工单状态]",
     "TBL_QM_INSPECT_RECORD": "检验状态 → 列名 [状态]（与生产记录 [状态] 不同）",
+    "TBL_SFC_PACKAGE": "包装条码状态 → JOIN TBL_SYS_DICTIONARY 取 CDIC_DESC，列名 [状态]（非库存状态）",
 }
 
 
@@ -327,6 +328,12 @@ def build_query_rules(
             "`SELECT` 须包含下文**全部**「事实表本表列」与各映射「必须列」，"
             "禁止只输出主键、外键 ID、单号、单位、数量、备注等少量列。"
         )
+    default_ob = (tcfg.get("default_order_by") or "").strip()
+    if default_ob:
+        lines.append(
+            f"**无时间 WHERE 的明细列表**：末尾须 `ORDER BY {default_ob}`（由近到远）；"
+            "用户只要 `COUNT(*)` 或含 `GROUP BY` 汇总时除外。"
+        )
     lines.append("")
 
     mandatory_decodes: List[str] = []
@@ -448,6 +455,10 @@ def build_query_rules(
         f"工作中心/工序/人员列是否来自对应维表而非同源；"
         f"**SELECT 每一列是否均有 `AS [中文名]`（含本表时间/状态/备注等列）**。"
     )
+    if default_ob:
+        lines.append(
+            f"- 无时间条件的明细是否已 `ORDER BY {default_ob}`（由近到远）；纯 `COUNT(*)` 除外。"
+        )
     if full_detail:
         lines.append(
             "- **采购明细列全集**：`SELECT` 是否已包含上文全部「事实表本表列」与各映射「必须列」；"

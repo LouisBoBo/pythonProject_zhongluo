@@ -93,6 +93,16 @@ FORCE_CODE_ENUMS: Dict[Tuple[str, str], Tuple[str, List[Tuple[str, str]]]] = {
             ("Batch", "批量生产"),
         ],
     ),
+    (
+        "TBL_EAP_GE_PARAM",
+        "CPARAM_STATUS",
+    ): (
+        "参数状态",
+        [
+            ("TESTPLATE", "试板参数"),
+            ("PRODUCTION", "生产参数"),
+        ],
+    ),
 }
 
 # 数字码值枚举（说明为 0待审核、1已通过 等顿号分隔，自动生成易误吞整段说明）
@@ -103,6 +113,41 @@ FORCE_NUMERIC_ENUMS: Dict[Tuple[str, str], Tuple[str, List[Tuple[str, str]]]] = 
     ): (
         "状态",
         [("0", "待审核"), ("1", "已通过"), ("2", "已驳回")],
+    ),
+    (
+        "TBL_SFC_PACKAGE",
+        "CINVENTORY_STATUS",
+    ): (
+        "库存状态",
+        [("0", "待提交"), ("1", "待入库"), ("2", "已入库"), ("3", "已出库")],
+    ),
+    (
+        "TBL_SFC_PACKAGE",
+        "CLEVEL",
+    ): (
+        "包装层级",
+        [("1", "内包"), ("2", "外包")],
+    ),
+    (
+        "TBL_EAP_GE_PARAM",
+        "CSTATUS",
+    ): (
+        "状态",
+        [("1", "可用"), ("0", "不可用")],
+    ),
+    (
+        "TBL_EAP_LDI_PARAM",
+        "CSTATUS",
+    ): (
+        "状态",
+        [("1", "可用"), ("0", "不可用")],
+    ),
+    (
+        "TBL_ESOP_TEMPORARY_CHANGE_ORDER",
+        "CCOUNTERSIGN",
+    ): (
+        "会签状态",
+        [("1", "会签完成"), ("0", "未会签")],
     ),
 }
 

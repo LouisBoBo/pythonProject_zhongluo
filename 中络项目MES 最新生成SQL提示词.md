@@ -41,11 +41,55 @@
   - 「采购单号POA…采购明细」「POA…采购单明细」与「POA…采购订单明细」须生成**同一逻辑**的 SQL（仅措辞不同）。
   - **列全集（用户未点名只要某几列时必做）**：`SELECT` 须包含【维表映射规则】中 `TBL_SRM_PO_DETAIL` 的**全部「事实表本表列」**及映射 **`item`、`po_id_to_srm_po` 的全部必须列**（含 `[料号]`、`[品名]`、`[采购单号]`、`[业务类型]` 等）；**禁止**只输出主键、外键 ID、单号、单位、数量、备注等 6 列左右的子集；
   - **禁止裸外键**：不得 `spd.CITEM_ID AS [物料ID]`、`spd.CPO_ID`；物料须 `LEFT JOIN dbo.TBL_BD_ITEM i WITH (NOLOCK) ON i.CID = spd.CITEM_ID` 输出 `[料号]`/`[品名]`；本表已有 `CITEM_CODE`、`CITEM_NAME`、`CITEM_SPEC` 等列须一并输出。
+- **化验任务记录（列表，无「明细」）**：
+  - 「化验任务」「化验任务记录」「药水化验」等同义，事实表须为 **`TBL_QM_ASSAY_LOG`**（别名以【维表映射规则】为准，常为 `qal`），**禁止**误用 `TBL_QM_ASSAY_LOG_ITEM`；
+  - 须按维表输出枚举译码列：`CTASK_STATUS`→`[任务状态]`（`0`待执行、`1`已执行、`2`已关闭）、`CASSAY_STATUS`→`[化验状态]`（**必须**含 0~5 全流程）、`CCHECK_STATUS`→`[审核状态]`、`CASSAY_RESULT`→`[化验结果]`、`CIS_OPEN_LINE`→`[是否开线前分析]`、`CTASK_TYPE`→`[任务类型]`（`1`常规化验、`2`异常化验）；**禁止**裸写状态码；
+  - 人员账号列各须**独立** `LEFT JOIN dbo.TBL_SYS_USER`（`CASSAY_USER`/`CCHECK_USER`/`CRECEIVE_USER`/`CSAMPLE_USER` 禁止共用一个用户表别名）；
+  - `CMEDICINE_TANK_ID`→`TBL_QM_MEDICINE_TANK`；`CWC_ID`→`TBL_BD_WC wc`（可选 `wc_p` 父级），**最后一条 JOIN 必须写完整** `ON wc.CID = qal.CWC_ID`，**禁止**在 `wc` / `u_s` 处截断 SQL；
+  - **化验任务 `FROM`/`JOIN` 定稿块（问化验任务时 SELECT 列表写完后，必须原样接上以下 7 行，禁止拆行、禁止省略最后一行 `u_s`）**：
+    - `FROM dbo.TBL_QM_ASSAY_LOG qal WITH (NOLOCK)`
+    - `LEFT JOIN dbo.TBL_BD_WC wc WITH (NOLOCK) ON wc.CID = qal.CWC_ID`
+    - `LEFT JOIN dbo.TBL_QM_MEDICINE_TANK qmmed WITH (NOLOCK) ON qmmed.CID = qal.CMEDICINE_TANK_ID`
+    - `LEFT JOIN dbo.TBL_SYS_USER sysus WITH (NOLOCK) ON sysus.CUSER_NAME = qal.CASSAY_USER`
+    - `LEFT JOIN dbo.TBL_SYS_USER sysus2 WITH (NOLOCK) ON sysus2.CUSER_NAME = qal.CCHECK_USER`
+    - `LEFT JOIN dbo.TBL_SYS_USER sysus3 WITH (NOLOCK) ON sysus3.CUSER_NAME = qal.CRECEIVE_USER`
+    - `LEFT JOIN dbo.TBL_SYS_USER sysus4 WITH (NOLOCK) ON sysus4.CUSER_NAME = qal.CSAMPLE_USER`
+- **检验记录主表（列表，无「明细」）**：
+  - 「检验记录」「IPQC」「FQC」「品质检验」等同义，事实表须为 **`TBL_QM_INSPECT_RECORD`**（别名常为 `qir`），含「明细」时用 **`TBL_QM_INSPECTION_RECORD_ITEM`**；
+  - 枚举**必须逐档译码**，**禁止**把字段说明整段写进 `WHEN 1`（错误：`WHEN 1 THEN N'合格、2不合格'`；正确：`WHEN 1 THEN N'合格' WHEN 2 THEN N'不合格'`）；
+  - `CDECISION_MODE`→`[判定模式]`（`1`系统自动判定、`2`用户人为判定）；`CRESULT`→`[检验结果]`（`1`合格、`2`不合格）；`CSTATUS`→`[状态]`（`0`待检验、`1`已检验待审核、`2`审核通过、`3`审核驳回）；`CINSPECT_TYPE`→`[检验类型]`（`1`首件、`2`巡检）；**禁止**裸码；
+  - 人员列须 `LEFT JOIN dbo.TBL_SYS_USER`，输出 **`[检验人账号]`/`[检验人姓名]`** 等简短中文表头，**禁止**把字段说明当表头（如 `检验人，对应TBL_SYS_USER.CUSER_NAME账号`）；
+- **领料记录明细（列表/明细）**：
+  - 「领料记录明细」「领料明细」「领料人记录明细」事实表须为 **`TBL_WMS_PICKING_LOG_DTL`**（别名常为 `wpld`），**必须** `INNER JOIN dbo.TBL_WMS_PICKING_LOG wmspi WITH (NOLOCK) ON wmspi.CID = wpld.CPICKING_ID`；
+  - **必须** `LEFT JOIN dbo.TBL_SYS_USER sysus WITH (NOLOCK) ON sysus.CUSER_NAME = wmspi.CUSER_NAME`，**同时输出** `wmspi.CUSER_NAME AS [领料人账号]`、`sysus.CDISPLAY_NAME AS [领料人姓名]`；**禁止**只输出工号或长表头 `领料人，对应TBL_SYS_USER.CUSER_NAME`；
+- **工单与条码生产关联表（列表/明细）**：
+  - 事实表 **`TBL_MO_BARCODE_PROD_LINK`**（别名常为 `mbp`），**必须** `LEFT JOIN dbo.TBL_MO mo WITH (NOLOCK) ON mo.CID = mbp.CMO_ID`；
+  - **`mo.CSTATUS` 须 CASE 译码为 `[工单状态]`**（`2`已发放、`5`已取消、`6`已暂停、`7`外协），**禁止**裸写 `mo.CSTATUS`；
+- **收货单主表（列表，含/不含明细行）**：
+  - 「收货单」「查询收货单」事实表须为 **`TBL_SRM_RECEIVING`**（别名 `sr`）；含明细数量列时 **`LEFT JOIN dbo.TBL_SRM_RECEIVING_DTL srd WITH (NOLOCK) ON srd.CRECEIVING_ID = sr.CID`**；
+  - **状态**须 CASE 译码（`BARCODE_STORAGE`→已收货，`BARCODE_DELIVERY`→运输中，`BARCODE_STOCK`→已入库）；**主表**用 `sr.CSTATUS`，**JOIN 明细后**用 `srd.CSTATUS`，**均须 CASE**，**禁止** `srd.CSTATUS AS [状态]` 或裸写 `BARCODE_DELIVERY`；
+- **收货单条码关联表（列表/明细）**：
+  - 事实表 **`TBL_SRM_RECEIVING_BARCODE`**（别名常为 `srb`），**必须** `INNER JOIN dbo.TBL_SRM_RECEIVING_DTL srmre WITH (NOLOCK) ON srmre.CID = srb.CRECEIVING_DTL_ID`；
+  - **`srmre.CSTATUS` 须 CASE 译码**（`BARCODE_STORAGE`→已收货，`BARCODE_DELIVERY`→运输中，`BARCODE_STOCK`→已入库），**禁止**裸写英文码；
+- **尾数仓操作记录**：
+  - 事实表 **`TBL_WMS_MANTISSA_RECORD`**（别名 `wmr`）；`CSTATUS`→`[状态]`（`1`已入仓、`2`已出仓），**禁止** `WHEN 1 THEN N'已入仓、2已出仓'` 整段说明写入 CASE；
 
 
-**`WITH (NOLOCK)` 写法（硬约束）**：
-- 每张表必须 **`dbo.表名 别名 WITH (NOLOCK)` 写在同一行**；
-- **禁止** `FROM dbo.TBL_SFC_WS_LOG l` 换行再写 `WITH (NOLOCK)`，也禁止 `LEFT JOIN dbo.TBL_MO mo` 换行再写 `WITH`。
+**`WITH (NOLOCK)` 写法（硬约束 · 高于一切排版习惯）**：
+- 每张表必须 **`dbo.表名 别名 WITH (NOLOCK)` 写在同一行**；`WITH` 与 `(` 之间**禁止**插入换行；
+- **全文禁止**出现以下任一模式（Dify/JSON 里常表现为 `\n\nWITH (NOLOCK)`，必 error 102）：
+  - `qal` 或任意表别名后**换行**再写 `WITH (NOLOCK)`；
+  - `FROM dbo.TBL_… alias` 与 `WITH (NOLOCK)` 分两行；
+  - `LEFT JOIN dbo.TBL_… alias` 与 `WITH (NOLOCK)` 分两行；
+  - SQL 在 `u_s`、`wc` 等别名处**未写完** `ON …` 就结束；
+- **禁止** `FROM dbo.TBL_SFC_WS_LOG l` 换行再写 `WITH (NOLOCK)`，也禁止 `LEFT JOIN dbo.TBL_MO mo` 换行再写 `WITH`；
+- **错误示例（会导致 error 102、near 'wc' / 'u_s'）**：
+  - `FROM dbo.TBL_QM_ASSAY_LOG qal` 换行 `WITH (NOLOCK) LEFT JOIN …`
+  - `LEFT JOIN dbo.TBL_SYS_USER u_s` 后截断，无 `ON u_s.CUSER_NAME = qal.CSAMPLE_USER`
+- **正确示例（一行一条 JOIN）**：
+  - `FROM dbo.TBL_QM_ASSAY_LOG qal WITH (NOLOCK)`
+  - `LEFT JOIN dbo.TBL_BD_WC wc WITH (NOLOCK) ON wc.CID = qal.CWC_ID`
+- **定稿自检**：在【SQL】全文搜索 `WITH`；若 `WITH` 前一字符是换行而非表别名/右括号，**必须重写** `FROM`/`JOIN` 段。
 
 
 对每一个 `AS` 中文别名：
@@ -61,6 +105,18 @@
 - 只使用片段中明确出现的字段，禁止用 `CODE`/`NAME`/`CNAME` 等泛字段补位；
 - 明细查询默认 `TOP (1000)`，用户指定 n 条则取 `min(n,1000)`；
 - 纯 `COUNT(*)`/聚合无分组查询**禁止加 ORDER BY**，避免 8127 错误。
+
+
+**明细列表默认排序（无时间限制时必做）**：
+- 用户问「列表/明细/记录」且 **WHERE 中无日期/时间区间**（未写本月/昨天/某年某月/起止日期等）时，**必须**在 SQL 末尾加 **`ORDER BY … DESC`**（**由近到远**，最新在前）；
+- 用户**明确**要求「最早/升序/从旧到新」时，改用 **`ASC`**；用户已写时间 `WHERE` 仍默认 **`DESC`**（除非明确要求升序）；
+- **排序列**须为【参考表结构】该事实表真实存在的时间列，按优先级择一（取第一个存在的列，禁止臆造）：
+  - 业务主时间：`CSTART_TIME`（开工）、`CEND_TIME`（完工）、`CAPPLY_DATE`（申请/采购）、`CASSAY_TIME`（化验）、`CSAMPLE_TIME`（取样）、`CRECEIVE_TIME`（接收）、`CCHECK_TIME`（审核）、`COCCUR_DATE`（发生）、`CDATETIME_CREATED`（创建）等；
+  - 多列均可空时可用：`ORDER BY COALESCE(别名.主时间, 别名.次时间, 别名.CID) DESC`；
+  - 无日期列时用 **`别名.CID DESC`** 作兜底；
+- **含 `GROUP BY` 的汇总**：按分组日期/时间列 **`DESC`**；纯 `COUNT(*)` 无分组**不加** `ORDER BY`；
+- 化验任务 **`TBL_QM_ASSAY_LOG`**（无时间 WHERE 时）：`ORDER BY COALESCE(qal.CASSAY_TIME, qal.CSAMPLE_TIME, qal.CRECEIVE_TIME, qal.CTASK_STAND_TIME_S) DESC, qal.CID DESC`；
+- 生产记录 **`TBL_SFC_WS_LOG`**（无时间 WHERE 时）：`ORDER BY l.CSTART_TIME DESC, l.CID DESC`。
 
 
 
@@ -91,6 +147,7 @@
 【SQL】
 只输出**一条可直接执行**的 SQL Server 语句，不含注释、不含分号、不含多余内容。
 - 多行明细必须带 `TOP (1000)`
+- 无时间条件的明细列表**必须** `ORDER BY` 主时间列 **`DESC`**（由近到远）
 - 纯计数不加 ORDER BY
 - 所有特殊中文别名必须加 `[]`
 - 严格遵守硬约束，不允许任何语法错误
@@ -101,7 +158,10 @@
 
 
 
-**Dify 工作流（无独立 Python 部署）**：日常只改 **`读取json配置维表/mes_dimension_joins.map`**（表格式，见文件内注释，不必写 JSON）→ `python3 build_dify_bundle.py` → 将 **`dify_mes_dimension_node.py` 全文复制**到 Dify **代码节点** → 出参 `dimension_rules` 接到维表映射变量。代码节点**仅**入参：`user_question`。
+**Dify 工作流（无独立 Python 部署）**：
+1. 维表：改 **`读取json配置维表/mes_dimension_joins.map`** → `python3 build_dify_bundle.py` → **`dify_mes_dimension_node.py` 全文复制**到维表代码节点（入参 `user_question`，出参 `dimension_rules`）。
+2. **SQL 修复（必加，否则 error 102 会反复出现）**：在 SQL 生成 LLM 与 **rookie_text2data** 之间增加代码节点，复制 **`读取json配置维表/fix_mes_sql_nolock.py`**，入参 `sql`←上一步 SQL，出参 **`fixed_sql`** **必须**接到 text2data（不要仍用未修复的 `sql`）。修复：合并 `\n\nWITH (NOLOCK)`、补全末尾 `sysus4`/`u_s` 截断。
+3. 相对时间见下。
 
 **相对时间依赖【当前系统时间】**：在 SQL 生成 LLM 节点前增加「代码」节点，将 Dify 系统变量 **`sys.timestamp`**（Unix 秒）格式化为 **`YYYY-MM-DD HH:MM:SS`（Asia/Shanghai）** 写入出参 `current_datetime` 并接到下方占位符；**禁止**留空让模型自行猜年月。
 
@@ -116,11 +176,10 @@ def main(timestamp: float) -> dict:
 
 
 
-【当前系统时间】{{#current_datetime.text#}}
 【参考表结构】{{#context#}}
 【用户问题】{{#1776736092059.text#}}
 【规则约束】{{#conversation.rule_list#}}
+【新增约束规则】{{#conversation.add_rules#}}
 【维表映射规则】{{#1779246683902.query_rules#}}
-【新加强制约束】{{#1778469687360.query_rules#}}
 【上一次SQL】{{#1778469687360.query_sql#}}
 【上一次报错】{{#1778469687360.error_message#}}

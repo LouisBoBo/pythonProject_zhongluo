@@ -512,15 +512,15 @@
           "select": [
             {
               "expr": "moout.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             },
             {
               "expr": "moout.COS_NO",
-              "as": "外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号"
+              "as": "外协订单号"
             },
             {
               "expr": "moout.CSO_NO",
-              "as": "销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号"
+              "as": "销售订单号"
             }
           ],
           "forbidden": []
@@ -862,7 +862,8 @@
       "default_for_keywords": [
         "检验记录",
         "IPQC",
-        "FQC"
+        "FQC",
+        "品质检验"
       ],
       "mappings": [
         {
@@ -873,7 +874,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE qir.CDECISION_MODE WHEN 1 THEN N'系统自动判定、2用户人为判定' WHEN 2 THEN N'用户人为判定' ELSE CAST(qir.CDECISION_MODE AS NVARCHAR(20)) END",
+              "expr": "CASE qir.CDECISION_MODE WHEN 1 THEN N'系统自动判定' WHEN 2 THEN N'用户人为判定' ELSE CAST(qir.CDECISION_MODE AS NVARCHAR(20)) END",
               "as": "判定模式"
             }
           ],
@@ -881,7 +882,7 @@
             "qir.CDECISION_MODE AS [判定模式]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：判定模式：1系统自动判定、2用户人为判定"
+          "notes": "判定模式：1系统自动判定、2用户人为判定"
         },
         {
           "id": "result",
@@ -891,7 +892,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE qir.CRESULT WHEN 1 THEN N'合格、2不合格' WHEN 2 THEN N'不合格' ELSE CAST(qir.CRESULT AS NVARCHAR(20)) END",
+              "expr": "CASE qir.CRESULT WHEN 1 THEN N'合格' WHEN 2 THEN N'不合格' ELSE CAST(qir.CRESULT AS NVARCHAR(20)) END",
               "as": "检验结果"
             }
           ],
@@ -899,7 +900,7 @@
             "qir.CRESULT AS [检验结果]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：检验结果：1合格、2不合格"
+          "notes": "检验结果：1合格、2不合格"
         },
         {
           "id": "status",
@@ -909,7 +910,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE qir.CSTATUS WHEN 0 THEN N'待检验、1已检验待审核、2审核通过、3审核驳回' WHEN 1 THEN N'已检验待审核' WHEN 2 THEN N'审核通过' WHEN 3 THEN N'审核驳回' ELSE CAST(qir.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE qir.CSTATUS WHEN 0 THEN N'待检验' WHEN 1 THEN N'已检验待审核' WHEN 2 THEN N'审核通过' WHEN 3 THEN N'审核驳回' ELSE CAST(qir.CSTATUS AS NVARCHAR(20)) END",
               "as": "状态"
             }
           ],
@@ -917,7 +918,25 @@
             "qir.CSTATUS AS [状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：状态：0待检验、1已检验待审核、2审核通过、3审核驳回"
+          "notes": "状态：0待检验、1已检验待审核、2审核通过、3审核驳回"
+        },
+        {
+          "id": "inspect_type",
+          "fact_columns": [
+            "CINSPECT_TYPE"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE qir.CINSPECT_TYPE WHEN 1 THEN N'首件' WHEN 2 THEN N'巡检' ELSE CAST(qir.CINSPECT_TYPE AS NVARCHAR(20)) END",
+              "as": "检验类型"
+            }
+          ],
+          "forbidden": [
+            "qir.CINSPECT_TYPE AS [检验类型]"
+          ],
+          "match_type": "enum",
+          "notes": "检验类型：1首件、2巡检"
         },
         {
           "id": "check_user",
@@ -960,11 +979,11 @@
           "select": [
             {
               "expr": "qir.CINSPECT_USER_NAME",
-              "as": "检验人，对应TBL_SYS_USER.CUSER_NAME账号"
+              "as": "检验人账号"
             },
             {
               "expr": "sysus.CDISPLAY_NAME",
-              "as": "检验人，对应TBL_SYS_USER.CUSER_NAME姓名"
+              "as": "检验人姓名"
             }
           ],
           "forbidden": [],
@@ -1013,11 +1032,11 @@
           "select": [
             {
               "expr": "qir.CLAB_INSPECT_USER_NAME",
-              "as": "实验室检验人，对应TBL_SYS_USER.CUSER_NAME账号"
+              "as": "实验室检验人账号"
             },
             {
               "expr": "sysus2.CDISPLAY_NAME",
-              "as": "实验室检验人，对应TBL_SYS_USER.CUSER_NAME姓名"
+              "as": "实验室检验人姓名"
             }
           ],
           "forbidden": [],
@@ -1038,11 +1057,11 @@
           "select": [
             {
               "expr": "qir.CLAB_RECEIVE_USER_NAME",
-              "as": "实验室接收人，对应TBL_SYS_USER.CUSER_NAME账号"
+              "as": "实验室接收人账号"
             },
             {
               "expr": "sysus3.CDISPLAY_NAME",
-              "as": "实验室接收人，对应TBL_SYS_USER.CUSER_NAME姓名"
+              "as": "实验室接收人姓名"
             }
           ],
           "forbidden": [],
@@ -1139,10 +1158,6 @@
           "as": "检验时间"
         },
         {
-          "expr": "qir.CINSPECT_TYPE",
-          "as": "检验类型"
-        },
-        {
           "expr": "qir.CIS_LAB",
           "as": "是否送实验室"
         },
@@ -1186,7 +1201,8 @@
           "expr": "qir.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "default_order_by": "COALESCE(qir.CINSPECT_TIME, qir.CCHECK_TIME, qir.CLAB_INSPECT_TIME) DESC, qir.CID DESC"
     },
     "TBL_EAP_ALARM": {
       "fact_alias": "ea",
@@ -2314,15 +2330,15 @@
           "select": [
             {
               "expr": "moout.CMO_LOT",
-              "as": "工单批次号，对应TBL_MO.CMO_LOT"
+              "as": "工单批次"
             },
             {
               "expr": "moout.COS_NO",
-              "as": "外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号"
+              "as": "外协订单号"
             },
             {
               "expr": "moout.CSO_NO",
-              "as": "销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号"
+              "as": "销售订单号"
             }
           ],
           "forbidden": []
@@ -5030,7 +5046,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE egp.CSTATUS WHEN 1 THEN N'可用；0：不可用' WHEN 0 THEN N'不可用' ELSE CAST(egp.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE egp.CSTATUS WHEN 1 THEN N'可用' WHEN 0 THEN N'不可用' ELSE CAST(egp.CSTATUS AS NVARCHAR(20)) END",
               "as": "状态"
             }
           ],
@@ -5038,7 +5054,25 @@
             "egp.CSTATUS AS [状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：状态，1：可用；0：不可用"
+          "notes": "状态：1可用、0不可用"
+        },
+        {
+          "id": "param_status",
+          "fact_columns": [
+            "CPARAM_STATUS"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(egp.CPARAM_STATUS)) WHEN 'TESTPLATE' THEN N'试板参数' WHEN 'PRODUCTION' THEN N'生产参数' ELSE egp.CPARAM_STATUS END",
+              "as": "参数状态"
+            }
+          ],
+          "forbidden": [
+            "egp.CPARAM_STATUS AS [参数状态]"
+          ],
+          "match_type": "enum",
+          "notes": "参数状态：TESTPLATE试板参数、PRODUCTION生产参数"
         },
         {
           "id": "item_no_to_bd_item",
@@ -5089,10 +5123,6 @@
         {
           "expr": "egp.CFB",
           "as": "A/B挂"
-        },
-        {
-          "expr": "egp.CPARAM_STATUS",
-          "as": "参数状态  => 试板参数: TESTPLATE   生产参数: PRODUCTION"
         },
         {
           "expr": "egp.CPART_NUM",
@@ -5603,87 +5633,91 @@
       "display_columns": [
         {
           "expr": "ehp.CDATETIME_CREATED",
-          "as": "创建时间（datetime类型，允许为空）"
+          "as": "创建时间"
         },
         {
           "expr": "ehp.CDATETIME_MODIFIED",
-          "as": "修改时间（datetime类型，允许为空）"
+          "as": "修改时间"
         },
         {
           "expr": "ehp.CDistA1A2",
-          "as": "AIA2靶距（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "AIA2靶距"
         },
         {
           "expr": "ehp.CDistA1B1",
-          "as": "AIB1靶距（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "AIB1靶距"
         },
         {
           "expr": "ehp.CDistA1C1_X",
-          "as": "A1C1 X距离（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "A1C1 X距离"
         },
         {
           "expr": "ehp.CDistA1C1_Y",
-          "as": "A1C1 Y距离（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "A1C1 Y距离"
         },
         {
           "expr": "ehp.CDistC1C2",
-          "as": "CIC2靶距（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "CIC2靶距"
         },
         {
           "expr": "ehp.CDistC1D1",
-          "as": "CID1靶距（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "CID1靶距"
         },
         {
           "expr": "ehp.CDrillstyle",
-          "as": "钻靶型式（varchar类型，长度50，允许为空）"
+          "as": "钻靶型式"
         },
         {
           "expr": "ehp.CENTERPRISE_CODE",
-          "as": "企业编码（bigint类型，允许为空）"
+          "as": "企业编码"
         },
         {
           "expr": "ehp.CFrontToA1A2",
-          "as": "AIA2至板前缘（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "AIA2至板前缘"
         },
         {
           "expr": "ehp.CINSTANCE_ID",
-          "as": "实例ID（varchar类型，长度256，允许为空）"
+          "as": "实例ID"
         },
         {
           "expr": "ehp.CJobname",
-          "as": "料号（varchar类型，长度50，允许为空）"
+          "as": "料号"
         },
         {
           "expr": "ehp.CLength",
-          "as": "板长（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "板长"
+        },
+        {
+          "expr": "ehp.CLot_NO",
+          "as": "批次号"
         },
         {
           "expr": "ehp.CORG_CODE",
-          "as": "组织编码（bigint类型，允许为空）"
+          "as": "组织编码"
         },
         {
           "expr": "ehp.Count",
-          "as": "数量（int类型，允许为空）"
+          "as": "数量"
         },
         {
           "expr": "ehp.CRecipetime",
-          "as": "配方生成时间戳（varchar类型，长度50，允许为空）"
+          "as": "配方生成时间"
         },
         {
           "expr": "ehp.CROWREMARK",
-          "as": "行备注（varchar(max)类型，允许为空，可存储长文本）"
+          "as": "行备注"
         },
         {
           "expr": "ehp.CSTATE",
-          "as": "状态（char类型，长度1，允许为空）"
+          "as": "状态"
         },
         {
           "expr": "ehp.CThickness",
-          "as": "板厚（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "板厚"
         },
         {
           "expr": "ehp.CWidth",
-          "as": "板宽（decimal类型，精度18位，小数位6位，允许为空）"
+          "as": "板宽"
         }
       ]
     },
@@ -6210,7 +6244,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE elp.CSTATUS WHEN 1 THEN N'可用；0：不可用' WHEN 0 THEN N'不可用' ELSE CAST(elp.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE elp.CSTATUS WHEN 1 THEN N'可用' WHEN 0 THEN N'不可用' ELSE CAST(elp.CSTATUS AS NVARCHAR(20)) END",
               "as": "状态"
             }
           ],
@@ -6218,7 +6252,7 @@
             "elp.CSTATUS AS [状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：状态，1：可用；0：不可用"
+          "notes": "状态：1可用、0不可用"
         },
         {
           "id": "item_no_to_bd_item",
@@ -8689,7 +8723,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE etc.CCOUNTERSIGN WHEN 1 THEN N'会签完成；0：未会签' WHEN 0 THEN N'未会签' ELSE CAST(etc.CCOUNTERSIGN AS NVARCHAR(20)) END",
+              "expr": "CASE etc.CCOUNTERSIGN WHEN 1 THEN N'会签完成' WHEN 0 THEN N'未会签' ELSE CAST(etc.CCOUNTERSIGN AS NVARCHAR(20)) END",
               "as": "会签状态"
             }
           ],
@@ -8697,7 +8731,7 @@
             "etc.CCOUNTERSIGN AS [会签状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：会签状态：1：会签完成；0：未会签"
+          "notes": "会签状态：1会签完成、0未会签"
         },
         {
           "id": "review_result",
@@ -8963,7 +8997,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9264,6 +9298,82 @@
             }
           ],
           "forbidden": []
+        },
+        {
+          "id": "result_zkcs",
+          "fact_columns": [
+            "CRESULT_ZKCS"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftm.CRESULT_ZKCS)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_ZKCS END",
+              "as": "阻抗测试判定结果"
+            }
+          ],
+          "forbidden": [],
+          "match_type": "enum",
+          "notes": "阻抗测试判定：ACC/OK通过、REJ不通过"
+        },
+        {
+          "id": "result_kthd",
+          "fact_columns": [
+            "CRESULT_KTHD"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftm.CRESULT_KTHD)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_KTHD END",
+              "as": "孔铜厚度判定结果"
+            }
+          ],
+          "forbidden": [],
+          "match_type": "enum"
+        },
+        {
+          "id": "result_qpbt",
+          "fact_columns": [
+            "CRESULT_QPBT"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftm.CRESULT_QPBT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_QPBT END",
+              "as": "切片表铜判定结果"
+            }
+          ],
+          "forbidden": [],
+          "match_type": "enum"
+        },
+        {
+          "id": "result_skkj",
+          "fact_columns": [
+            "CRESULT_SKKJ"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftm.CRESULT_SKKJ)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_SKKJ END",
+              "as": "蚀刻孔径判定结果"
+            }
+          ],
+          "forbidden": [],
+          "match_type": "enum"
+        },
+        {
+          "id": "result_skxk",
+          "fact_columns": [
+            "CRESULT_SKXK"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftm.CRESULT_SKXK)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftm.CRESULT_SKXK END",
+              "as": "蚀刻线宽判定结果"
+            }
+          ],
+          "forbidden": [],
+          "match_type": "enum"
         }
       ],
       "display_columns": [
@@ -9388,26 +9498,6 @@
           "as": "挂板数量"
         },
         {
-          "expr": "ftm.CRESULT_KTHD",
-          "as": "孔铜厚度：判定结果；ACC：通过；REJ：不通过"
-        },
-        {
-          "expr": "ftm.CRESULT_QPBT",
-          "as": "切片表铜：判定结果；ACC：通过；REJ：不通过"
-        },
-        {
-          "expr": "ftm.CRESULT_SKKJ",
-          "as": "蚀刻后孔径测量：判定结果；ACC：通过；REJ：不通过"
-        },
-        {
-          "expr": "ftm.CRESULT_SKXK",
-          "as": "蚀刻后线宽：判定结果；ACC：通过；REJ：不通过"
-        },
-        {
-          "expr": "ftm.CRESULT_ZKCS",
-          "as": "阻抗测试：判定结果；ACC：通过；REJ：不通过"
-        },
-        {
           "expr": "ftm.CSAMPLE_QTY",
           "as": "抽样数量"
         },
@@ -9473,6 +9563,24 @@
           "forbidden": []
         },
         {
+          "id": "result_acc_rej",
+          "fact_columns": [
+            "CRESULT"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftq.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftq.CRESULT END",
+              "as": "判定结果"
+            }
+          ],
+          "forbidden": [
+            "ftq.CRESULT AS [判定结果]"
+          ],
+          "match_type": "enum",
+          "notes": "判定结果：ACC/OK通过、REJ不通过"
+        },
+        {
           "id": "main_id_to_fa_txdd_main",
           "fact_columns": [
             "CMAIN_ID"
@@ -9487,7 +9595,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9549,10 +9657,6 @@
         {
           "expr": "ftq.CKNTHF",
           "as": "孔内铜厚F"
-        },
-        {
-          "expr": "ftq.CRESULT",
-          "as": "判定结果；ACC：通过；REJ：不通过"
         }
       ]
     },
@@ -9563,6 +9667,24 @@
         "图形电镀蚀刻后孔径测量"
       ],
       "mappings": [
+        {
+          "id": "result_acc_rej",
+          "fact_columns": [
+            "CRESULT"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(fts.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE fts.CRESULT END",
+              "as": "判定结果"
+            }
+          ],
+          "forbidden": [
+            "fts.CRESULT AS [判定结果]"
+          ],
+          "match_type": "enum",
+          "notes": "判定结果：ACC/OK通过、REJ不通过"
+        },
         {
           "id": "main_id_to_fa_txdd_main",
           "fact_columns": [
@@ -9578,7 +9700,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9600,10 +9722,6 @@
         {
           "expr": "fts.CREMARK",
           "as": "备注"
-        },
-        {
-          "expr": "fts.CRESULT",
-          "as": "判定结果；ACC：通过；REJ：不通过"
         },
         {
           "expr": "fts.CTOLERANCE",
@@ -9633,7 +9751,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9724,7 +9842,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9761,6 +9879,24 @@
       ],
       "mappings": [
         {
+          "id": "result_acc_rej",
+          "fact_columns": [
+            "CRESULT"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(ftz.CRESULT)) WHEN 'ACC' THEN N'通过' WHEN 'REJ' THEN N'不通过' WHEN 'OK' THEN N'通过' ELSE ftz.CRESULT END",
+              "as": "判定结果"
+            }
+          ],
+          "forbidden": [
+            "ftz.CRESULT AS [判定结果]"
+          ],
+          "match_type": "enum",
+          "notes": "判定结果：ACC/OK通过、REJ不通过"
+        },
+        {
           "id": "main_id_to_fa_txdd_main",
           "fact_columns": [
             "CMAIN_ID"
@@ -9775,7 +9911,7 @@
           "select": [
             {
               "expr": "fatxd.CITEM_NO",
-              "as": "料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "料号"
             }
           ],
           "forbidden": []
@@ -9793,10 +9929,6 @@
         {
           "expr": "ftz.CREMARK",
           "as": "备注"
-        },
-        {
-          "expr": "ftz.CRESULT",
-          "as": "判定结果；ACC：通过；REJ：不通过"
         },
         {
           "expr": "ftz.CSTANDARD",
@@ -10172,7 +10304,8 @@
       "fact_alias": "fci",
       "label": "4M变更料号日志表",
       "default_for_keywords": [
-        "4M变更料号日志表"
+        "4M变更料号日志表",
+        "4M变更料号"
       ],
       "mappings": [
         {
@@ -10190,7 +10323,7 @@
           "select": [
             {
               "expr": "esopt.CAPPLICANT_NAME",
-              "as": "申请人，对应TBL_SYS_USER.CUSER_NAME"
+              "as": "申请人"
             },
             {
               "expr": "esopt.CAPPLICANT_NO",
@@ -10202,21 +10335,69 @@
             },
             {
               "expr": "esopt.CINVOLVED_ITEM_NO",
-              "as": "涉及料号，对应TBL_BD_ITEM.CITEM_NO"
+              "as": "涉及料号"
+            },
+            {
+              "expr": "CASE esopt.CCOUNTERSIGN WHEN 1 THEN N'会签完成' WHEN 0 THEN N'未会签' ELSE CAST(esopt.CCOUNTERSIGN AS NVARCHAR(20)) END",
+              "as": "会签状态"
+            },
+            {
+              "expr": "CASE esopt.CREVIEW_RESULT WHEN 1 THEN N'同意' WHEN 2 THEN N'不同意' ELSE CAST(esopt.CREVIEW_RESULT AS NVARCHAR(20)) END",
+              "as": "审核结果"
+            }
+          ],
+          "forbidden": []
+        },
+        {
+          "id": "after_item_to_bd_item",
+          "fact_columns": [
+            "CAFTER_ITEM"
+          ],
+          "joins": [
+            {
+              "alias": "bd_a",
+              "table": "TBL_BD_ITEM",
+              "on": "bd_a.CITEM_NO = fci.CAFTER_ITEM"
+            }
+          ],
+          "select": [
+            {
+              "expr": "fci.CAFTER_ITEM",
+              "as": "变更后板材料号"
+            },
+            {
+              "expr": "bd_a.CITEM_NAME",
+              "as": "变更后品名"
+            }
+          ],
+          "forbidden": []
+        },
+        {
+          "id": "before_item_to_bd_item",
+          "fact_columns": [
+            "CBEFOR_ITEM"
+          ],
+          "joins": [
+            {
+              "alias": "bd_b",
+              "table": "TBL_BD_ITEM",
+              "on": "bd_b.CITEM_NO = fci.CBEFOR_ITEM"
+            }
+          ],
+          "select": [
+            {
+              "expr": "fci.CBEFOR_ITEM",
+              "as": "变更前板材料号"
+            },
+            {
+              "expr": "bd_b.CITEM_NAME",
+              "as": "变更前品名"
             }
           ],
           "forbidden": []
         }
       ],
       "display_columns": [
-        {
-          "expr": "fci.CAFTER_ITEM",
-          "as": "变更后板材料号，对应TBL_BD_ITEM.CITEM_NO"
-        },
-        {
-          "expr": "fci.CBEFOR_ITEM",
-          "as": "变更前板材料号，对应TBL_BD_ITEM.CITEM_NO"
-        },
         {
           "expr": "fci.CPART",
           "as": "部件"
@@ -10284,7 +10465,9 @@
       "fact_alias": "mbp",
       "label": "工单与条码生产关联表",
       "default_for_keywords": [
-        "工单与条码生产关联表"
+        "工单与条码生产关联表",
+        "工单与条码",
+        "条码生产关联"
       ],
       "mappings": [
         {
@@ -10339,9 +10522,15 @@
             {
               "expr": "mo.CMO_LOT",
               "as": "工单批次"
+            },
+            {
+              "expr": "CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END",
+              "as": "工单状态"
             }
           ],
-          "forbidden": []
+          "forbidden": [
+            "mo.CSTATUS AS [工单状态]"
+          ]
         },
         {
           "id": "process",
@@ -10380,10 +10569,11 @@
       ]
     },
     "TBL_MO_OUTS": {
-      "fact_alias": "mo",
+      "fact_alias": "moout",
       "label": "外协工单信息表",
       "default_for_keywords": [
-        "外协工单信息表"
+        "外协工单信息表",
+        "外协工单"
       ],
       "mappings": [
         {
@@ -10395,12 +10585,12 @@
             {
               "alias": "bdite",
               "table": "TBL_BD_ITEM",
-              "on": "bdite.CITEM_NO = mo.CITEM_NO"
+              "on": "bdite.CITEM_NO = moout.CITEM_NO"
             }
           ],
           "select": [
             {
-              "expr": "bdite.CITEM_NO",
+              "expr": "moout.CITEM_NO",
               "as": "料号"
             },
             {
@@ -10421,22 +10611,22 @@
           ],
           "joins": [
             {
-              "alias": "mo",
+              "alias": "m",
               "table": "TBL_MO",
-              "on": "mo.CMO_LOT = mo.CMO_LOT"
+              "on": "m.CMO_LOT = moout.CMO_LOT"
             }
           ],
           "select": [
             {
-              "expr": "mo.CORDER_NO",
+              "expr": "m.CORDER_NO",
               "as": "工单编号"
             },
             {
-              "expr": "mo.CMO_LOT",
+              "expr": "m.CMO_LOT",
               "as": "工单批次"
             },
             {
-              "expr": "CASE mo.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(mo.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE m.CSTATUS WHEN 2 THEN N'已发放' WHEN 5 THEN N'已取消' WHEN 6 THEN N'已暂停' WHEN 7 THEN N'外协' ELSE CAST(m.CSTATUS AS NVARCHAR(20)) END",
               "as": "工单状态"
             }
           ],
@@ -10445,16 +10635,16 @@
       ],
       "display_columns": [
         {
-          "expr": "mo.COS_NO",
-          "as": "外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号"
+          "expr": "moout.COS_NO",
+          "as": "外协订单号"
         },
         {
-          "expr": "mo.CQTY",
+          "expr": "moout.CSO_NO",
+          "as": "销售订单号"
+        },
+        {
+          "expr": "moout.CQTY",
           "as": "数量"
-        },
-        {
-          "expr": "mo.CSO_NO",
-          "as": "销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号"
         }
       ]
     },
@@ -12214,7 +12404,10 @@
       "fact_alias": "qal",
       "label": "化验任务记录表",
       "default_for_keywords": [
-        "化验任务记录表"
+        "化验任务记录表",
+        "化验任务记录",
+        "化验任务",
+        "药水化验"
       ],
       "mappings": [
         {
@@ -12243,7 +12436,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE qal.CASSAY_STATUS WHEN 1 THEN N'已化验' WHEN 0 THEN N'未化验' ELSE CAST(qal.CASSAY_STATUS AS NVARCHAR(20)) END",
+              "expr": "CASE qal.CASSAY_STATUS WHEN 0 THEN N'待取样' WHEN 1 THEN N'待接收' WHEN 2 THEN N'待化验' WHEN 3 THEN N'化验中' WHEN 4 THEN N'待审核' WHEN 5 THEN N'已审核' ELSE CAST(qal.CASSAY_STATUS AS NVARCHAR(20)) END",
               "as": "化验状态"
             }
           ],
@@ -12251,7 +12444,26 @@
             "qal.CASSAY_STATUS AS [化验状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：化验状态：1：已化验、0：未化验"
+          "notes": "化验流程状态（现场除0/1外常见2~5；5与已审核任务一致，译码为已审核）。勿仅用文档0/1两项"
+        },
+        {
+          "id": "task_type",
+          "fact_columns": [
+            "CTASK_TYPE"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE qal.CTASK_TYPE WHEN 1 THEN N'常规化验' WHEN 2 THEN N'异常化验' ELSE CAST(qal.CTASK_TYPE AS NVARCHAR(20)) END",
+              "as": "任务类型"
+            }
+          ],
+          "forbidden": [
+            "qal.CTASK_TYPE AS [任务类型]",
+            "CAST(qal.CTASK_TYPE AS NVARCHAR(20)) AS [任务类型]"
+          ],
+          "match_type": "enum",
+          "notes": "任务类型：1常规化验、2异常化验（现场CTASK_TYPE取值）"
         },
         {
           "id": "heck_status",
@@ -12262,11 +12474,11 @@
           "select": [
             {
               "expr": "CASE qal.CCHECK_STATUS WHEN 1 THEN N'已审核' WHEN 0 THEN N'未审核' ELSE CAST(qal.CCHECK_STATUS AS NVARCHAR(20)) END",
-              "as": "CCHECK_STATUS"
+              "as": "审核状态"
             }
           ],
           "forbidden": [
-            "qal.CCHECK_STATUS AS [CCHECK_STATUS]"
+            "qal.CCHECK_STATUS AS [审核状态]"
           ],
           "match_type": "enum",
           "notes": "枚举译码：审核状态1：已审核、0：未审核"
@@ -12297,7 +12509,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE qal.CTASK_STATUS WHEN 1 THEN N'已执行' WHEN 0 THEN N'未执行' ELSE CAST(qal.CTASK_STATUS AS NVARCHAR(20)) END",
+              "expr": "CASE qal.CTASK_STATUS WHEN 0 THEN N'待执行' WHEN 1 THEN N'已执行' WHEN 2 THEN N'已关闭' ELSE CAST(qal.CTASK_STATUS AS NVARCHAR(20)) END",
               "as": "任务状态"
             }
           ],
@@ -12305,7 +12517,7 @@
             "qal.CTASK_STATUS AS [任务状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：任务状态：1：已执行、0：未执行"
+          "notes": "化验任务状态：0待执行、1已执行、2已关闭"
         },
         {
           "id": "assay_user_to_sys_user",
@@ -12346,12 +12558,12 @@
           ],
           "select": [
             {
-              "expr": "sysus2.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "qal.CCHECK_USER",
+              "as": "审核人账号"
             },
             {
-              "expr": "sysus2.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus2.CDISPLAY_NAME",
+              "as": "审核人姓名"
             }
           ],
           "forbidden": []
@@ -12394,12 +12606,12 @@
           ],
           "select": [
             {
-              "expr": "sysus3.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "qal.CRECEIVE_USER",
+              "as": "接收人账号"
             },
             {
-              "expr": "sysus3.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus3.CDISPLAY_NAME",
+              "as": "接收人姓名"
             }
           ],
           "forbidden": []
@@ -12418,12 +12630,12 @@
           ],
           "select": [
             {
-              "expr": "sysus4.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "qal.CSAMPLE_USER",
+              "as": "取样人账号"
             },
             {
-              "expr": "sysus4.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus4.CDISPLAY_NAME",
+              "as": "取样人姓名"
             }
           ],
           "forbidden": []
@@ -12526,14 +12738,11 @@
           "as": "任务标签"
         },
         {
-          "expr": "qal.CTASK_TYPE",
-          "as": "任务类型"
-        },
-        {
           "expr": "qal.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "default_order_by": "COALESCE(qal.CASSAY_TIME, qal.CSAMPLE_TIME, qal.CRECEIVE_TIME, qal.CTASK_STAND_TIME_S) DESC, qal.CID DESC"
     },
     "TBL_QM_ASSAY_LOG_ITEM": {
       "fact_alias": "qal",
@@ -14322,21 +14531,22 @@
           ],
           "select": [
             {
-              "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "sdu.CUSER_NAME",
+              "as": "用户账号"
             },
             {
-              "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "用户姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         }
       ],
       "display_columns": [
         {
           "expr": "sdu.CDEVICE_NO",
-          "as": "设备编码， 值为RR01、RR02、RR03"
+          "as": "设备编码"
         }
       ]
     },
@@ -14344,7 +14554,8 @@
       "fact_alias": "sp",
       "label": "包装信息表",
       "default_for_keywords": [
-        "包装信息表"
+        "包装信息表",
+        "包装"
       ],
       "mappings": [
         {
@@ -14355,7 +14566,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE sp.CINVENTORY_STATUS WHEN 0 THEN N'待提交、1待入库、2已入库、3已出库' WHEN 1 THEN N'待入库' WHEN 2 THEN N'已入库' WHEN 3 THEN N'已出库' ELSE CAST(sp.CINVENTORY_STATUS AS NVARCHAR(20)) END",
+              "expr": "CASE sp.CINVENTORY_STATUS WHEN 0 THEN N'待提交' WHEN 1 THEN N'待入库' WHEN 2 THEN N'已入库' WHEN 3 THEN N'已出库' ELSE CAST(sp.CINVENTORY_STATUS AS NVARCHAR(20)) END",
               "as": "库存状态"
             }
           ],
@@ -14363,7 +14574,7 @@
             "sp.CINVENTORY_STATUS AS [库存状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：库存状态，0待提交、1待入库、2已入库、3已出库"
+          "notes": "库存状态：0待提交、1待入库、2已入库、3已出库"
         },
         {
           "id": "is_reprint",
@@ -14373,7 +14584,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE sp.CIS_REPRINT WHEN 0 THEN N'非补打、1补打' WHEN 1 THEN N'补打' ELSE CAST(sp.CIS_REPRINT AS NVARCHAR(20)) END",
+              "expr": "CASE UPPER(RTRIM(CAST(sp.CIS_REPRINT AS NVARCHAR(10)))) WHEN '0' THEN N'非补打' WHEN '1' THEN N'补打' ELSE sp.CIS_REPRINT END",
               "as": "是否补打"
             }
           ],
@@ -14381,7 +14592,7 @@
             "sp.CIS_REPRINT AS [是否补打]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：是否补打，0非补打、1补打"
+          "notes": "是否补打：0非补打、1补打"
         },
         {
           "id": "level",
@@ -14391,7 +14602,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE sp.CLEVEL WHEN 1 THEN N'内包、2外包' WHEN 2 THEN N'外包' ELSE CAST(sp.CLEVEL AS NVARCHAR(20)) END",
+              "expr": "CASE sp.CLEVEL WHEN 1 THEN N'内包' WHEN 2 THEN N'外包' ELSE CAST(sp.CLEVEL AS NVARCHAR(20)) END",
               "as": "包装层级"
             }
           ],
@@ -14399,7 +14610,29 @@
             "sp.CLEVEL AS [包装层级]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：包装层级，1内包、2外包"
+          "notes": "包装层级：1内包、2外包"
+        },
+        {
+          "id": "status",
+          "fact_columns": [
+            "CSTATUS"
+          ],
+          "joins": [
+            {
+              "alias": "sysdic",
+              "table": "TBL_SYS_DICTIONARY",
+              "on": "sysdic.CDIC_CODE = sp.CSTATUS"
+            }
+          ],
+          "select": [
+            {
+              "expr": "COALESCE(NULLIF(RTRIM(sysdic.CDIC_DESC), ''), NULLIF(RTRIM(sysdic.CDIC_NAME), ''), sp.CSTATUS)",
+              "as": "状态"
+            }
+          ],
+          "forbidden": [
+            "sp.CSTATUS AS [状态]"
+          ]
         },
         {
           "id": "ustomer_code_to_bd_customer",
@@ -14537,7 +14770,7 @@
         },
         {
           "expr": "sp.CPARENT_ID",
-          "as": "父级包装ID，对应TBL_SFC_PACKAGE.CID"
+          "as": "父级包装ID"
         },
         {
           "expr": "sp.CQTY",
@@ -14569,11 +14802,7 @@
         },
         {
           "expr": "sp.CSPLIT_ID",
-          "as": "拆分前的上级条码ID，对应TBL_SFC_PACKAGE.CID"
-        },
-        {
-          "expr": "sp.CSTATUS",
-          "as": "状态，来源数据字典TBL_SYS_DICTIONARY.CDIC_CODE"
+          "as": "拆分上级条码ID"
         },
         {
           "expr": "sp.CWEIGHT",
@@ -14585,7 +14814,7 @@
         },
         {
           "expr": "sp.EXPAND1",
-          "as": "扩展字段1（内箱3045流水号）"
+          "as": "内箱3045流水号"
         },
         {
           "expr": "sp.ScrapDateTime",
@@ -14593,17 +14822,18 @@
         },
         {
           "expr": "sp.ScrapUser",
-          "as": "报废人，对应TBL_SYS_UER.CUSER_NAME"
+          "as": "报废人"
         },
         {
           "expr": "sp.XOUT",
-          "as": "叉板数"
+          "as": "XOUT叉板数"
         },
         {
           "expr": "sp.CID",
           "as": "主键ID"
         }
-      ]
+      ],
+      "default_order_by": "sp.CPACKING_TIME DESC"
     },
     "TBL_SFC_PACKAGE_LABEL_LINK": {
       "fact_alias": "spl",
@@ -14697,10 +14927,12 @@
       ]
     },
     "TBL_SFC_PACKAGE_LOG": {
-      "fact_alias": "spl",
+      "fact_alias": "spkgl",
       "label": "包装操作日志表",
       "default_for_keywords": [
-        "包装操作日志表"
+        "包装操作日志表",
+        "包装操作日志",
+        "包装日志"
       ],
       "mappings": [
         {
@@ -14712,17 +14944,21 @@
             {
               "alias": "sfcpa",
               "table": "TBL_SFC_PACKAGE",
-              "on": "sfcpa.CBARCODE = spl.CBARCODE"
+              "on": "sfcpa.CBARCODE = spkgl.CBARCODE"
             }
           ],
           "select": [
+            {
+              "expr": "sfcpa.CBARCODE",
+              "as": "包装条码"
+            },
             {
               "expr": "sfcpa.CBATCH_NUMBER",
               "as": "包装批次号"
             },
             {
               "expr": "sfcpa.CCUSTOMER_CODE",
-              "as": "客户编码，对应TBL_BD_CUSTOMER.CUSTOMER_NO"
+              "as": "客户编码"
             },
             {
               "expr": "sfcpa.CCUSTOMER_ITEM_NAME",
@@ -14734,16 +14970,35 @@
             }
           ],
           "forbidden": []
+        },
+        {
+          "id": "operate_type",
+          "fact_columns": [
+            "COPERATE_TYPE"
+          ],
+          "joins": [
+            {
+              "alias": "sysdic_op",
+              "table": "TBL_SYS_DICTIONARY",
+              "on": "sysdic_op.CDIC_CODE = CONCAT(N'PACKAGE_OPERATE_TYPE_', CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20))) OR (sysdic_op.CDIC_VALUE = CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20)) AND RTRIM(sysdic_op.CPARENT) = N'PACKAGE_OPERATE_TYPE')"
+            }
+          ],
+          "select": [
+            {
+              "expr": "COALESCE(NULLIF(RTRIM(sysdic_op.CDIC_DESC), ''), NULLIF(RTRIM(sysdic_op.CDIC_NAME), ''), CAST(spkgl.COPERATE_TYPE AS NVARCHAR(20)))",
+              "as": "操作类型"
+            }
+          ],
+          "forbidden": [
+            "spkgl.COPERATE_TYPE AS [操作类型]",
+            "spkgl.COPERATE_TYPE AS [操作类型代码]"
+          ]
         }
       ],
       "display_columns": [
         {
-          "expr": "spl.COPERATE_TYPE",
-          "as": "操作类型代码"
-        },
-        {
-          "expr": "spl.CREMARK",
-          "as": "备注，描述具体的操作类型"
+          "expr": "spkgl.CREMARK",
+          "as": "备注"
         }
       ]
     },
@@ -17285,7 +17540,9 @@
       "fact_alias": "sr",
       "label": "收货单主表",
       "default_for_keywords": [
-        "收货单主表"
+        "收货单主表",
+        "收货单",
+        "查询收货单"
       ],
       "mappings": [
         {
@@ -17296,7 +17553,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE UPPER(RTRIM(sr.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' ELSE sr.CSTATUS END",
+              "expr": "CASE UPPER(RTRIM(sr.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE sr.CSTATUS END",
               "as": "状态"
             }
           ],
@@ -17304,7 +17561,64 @@
             "sr.CSTATUS AS [状态]"
           ],
           "match_type": "enum",
-          "notes": "状态码译码：状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中"
+          "notes": "状态码译码：状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库"
+        },
+        {
+          "id": "receiving_dtl_lines",
+          "fact_columns": [
+            "CID"
+          ],
+          "joins": [
+            {
+              "alias": "srd",
+              "table": "TBL_SRM_RECEIVING_DTL",
+              "on": "srd.CRECEIVING_ID = sr.CID"
+            },
+            {
+              "alias": "sysus2",
+              "table": "TBL_SYS_USER",
+              "on": "sysus2.CUSER_NAME = srd.CINSPECT_USER",
+              "depends_on": "srd"
+            }
+          ],
+          "select": [
+            {
+              "expr": "srd.CPO_QTY",
+              "as": "采购数量"
+            },
+            {
+              "expr": "srd.CRECEIVING_QTY",
+              "as": "收货数量"
+            },
+            {
+              "expr": "srd.CGOOD_QTY",
+              "as": "合格数量"
+            },
+            {
+              "expr": "srd.CINSOTCK_QTY",
+              "as": "入库数量"
+            },
+            {
+              "expr": "CASE UPPER(RTRIM(srd.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srd.CSTATUS END",
+              "as": "状态"
+            },
+            {
+              "expr": "srd.CINSPECT_RESULT",
+              "as": "检验结果"
+            },
+            {
+              "expr": "srd.CINSPECT_USER",
+              "as": "检验人账号"
+            },
+            {
+              "expr": "sysus2.CDISPLAY_NAME",
+              "as": "检验人姓名"
+            }
+          ],
+          "forbidden": [
+            "srd.CSTATUS AS [状态]"
+          ],
+          "notes": "查收货单含明细行时 JOIN 明细；状态须 CASE 译码，禁止 srd.CSTATUS 裸写"
         },
         {
           "id": "receiving_user_to_sys_user",
@@ -17320,15 +17634,16 @@
           ],
           "select": [
             {
-              "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "sr.CRECEIVING_USER",
+              "as": "收货人账号"
             },
             {
-              "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "收货人姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         },
         {
           "id": "supplier",
@@ -17400,13 +17715,16 @@
           "expr": "sr.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "default_order_by": "sr.CRECEIVING_DATE DESC, sr.CID DESC"
     },
     "TBL_SRM_RECEIVING_BARCODE": {
       "fact_alias": "srb",
       "label": "收货单条码关联表",
       "default_for_keywords": [
-        "收货单条码关联表"
+        "收货单条码关联表",
+        "收货单条码",
+        "收货条码"
       ],
       "mappings": [
         {
@@ -17469,9 +17787,43 @@
             {
               "expr": "srmre.CSOURCE_NO",
               "as": "来源单号"
+            },
+            {
+              "expr": "srmre.CDELIVER_QTY",
+              "as": "供应商送货数量"
+            },
+            {
+              "expr": "srmre.CGOOD_QTY",
+              "as": "合格数量"
+            },
+            {
+              "expr": "srmre.CINSOTCK_QTY",
+              "as": "入库数量"
+            },
+            {
+              "expr": "srmre.CRECEIVING_QTY",
+              "as": "收货数量"
+            },
+            {
+              "expr": "srmre.CRETURN_QTY",
+              "as": "退货数量"
+            },
+            {
+              "expr": "srmre.CPO_QTY",
+              "as": "采购数量"
+            },
+            {
+              "expr": "srmre.CINSPECT_RESULT",
+              "as": "检验结果"
+            },
+            {
+              "expr": "CASE UPPER(RTRIM(srmre.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srmre.CSTATUS END",
+              "as": "状态"
             }
           ],
-          "forbidden": []
+          "forbidden": [
+            "srmre.CSTATUS AS [状态]"
+          ]
         }
       ],
       "display_columns": []
@@ -17480,9 +17832,28 @@
       "fact_alias": "srd",
       "label": "收货单明细表",
       "default_for_keywords": [
-        "收货单明细表"
+        "收货单明细表",
+        "收货单明细"
       ],
       "mappings": [
+        {
+          "id": "status",
+          "fact_columns": [
+            "CSTATUS"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(srd.CSTATUS)) WHEN 'BARCODE_STORAGE' THEN N'已收货' WHEN 'BARCODE_DELIVERY' THEN N'运输中' WHEN 'BARCODE_STOCK' THEN N'已入库' ELSE srd.CSTATUS END",
+              "as": "状态"
+            }
+          ],
+          "forbidden": [
+            "srd.CSTATUS AS [状态]"
+          ],
+          "match_type": "enum",
+          "notes": "状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库"
+        },
         {
           "id": "inspect_user_to_sys_user",
           "fact_columns": [
@@ -17497,15 +17868,16 @@
           ],
           "select": [
             {
-              "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "srd.CINSPECT_USER",
+              "as": "检验人账号"
             },
             {
-              "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "检验人姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         },
         {
           "id": "item",
@@ -17776,10 +18148,6 @@
         {
           "expr": "srd.CSOURCE_TYPE",
           "as": "来源类型"
-        },
-        {
-          "expr": "srd.CSTATUS",
-          "as": "状态"
         },
         {
           "expr": "srd.CUNIT",
@@ -18535,7 +18903,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE wlr.CSTATUS WHEN 1 THEN N'已入仓、2已出仓' WHEN 2 THEN N'已出仓' ELSE CAST(wlr.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE wlr.CSTATUS WHEN 1 THEN N'已入仓' WHEN 2 THEN N'已出仓' ELSE CAST(wlr.CSTATUS AS NVARCHAR(20)) END",
               "as": "状态"
             }
           ],
@@ -18792,7 +19160,8 @@
       "fact_alias": "wmr",
       "label": "尾数仓操作记录",
       "default_for_keywords": [
-        "尾数仓操作记录"
+        "尾数仓操作记录",
+        "尾数仓"
       ],
       "mappings": [
         {
@@ -18803,7 +19172,7 @@
           "joins": [],
           "select": [
             {
-              "expr": "CASE wmr.CSTATUS WHEN 1 THEN N'已入仓、2已出仓' WHEN 2 THEN N'已出仓' ELSE CAST(wmr.CSTATUS AS NVARCHAR(20)) END",
+              "expr": "CASE wmr.CSTATUS WHEN 1 THEN N'已入仓' WHEN 2 THEN N'已出仓' ELSE CAST(wmr.CSTATUS AS NVARCHAR(20)) END",
               "as": "状态"
             }
           ],
@@ -18811,7 +19180,7 @@
             "wmr.CSTATUS AS [状态]"
           ],
           "match_type": "enum",
-          "notes": "枚举译码：1已入仓、2已出仓"
+          "notes": "状态：1已入仓、2已出仓"
         },
         {
           "id": "in_user_to_sys_user",
@@ -18827,15 +19196,16 @@
           ],
           "select": [
             {
-              "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "wmr.CIN_USER",
+              "as": "入仓人账号"
             },
             {
-              "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "入仓人姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         },
         {
           "id": "item_name_to_bd_item",
@@ -18899,15 +19269,16 @@
           ],
           "select": [
             {
-              "expr": "sysus2.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "wmr.COUT_USER",
+              "as": "出仓人账号"
             },
             {
-              "expr": "sysus2.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus2.CDISPLAY_NAME",
+              "as": "出仓人姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         },
         {
           "id": "warehouse",
@@ -18963,13 +19334,16 @@
           "expr": "wmr.CREMARK",
           "as": "备注"
         }
-      ]
+      ],
+      "default_order_by": "COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC"
     },
     "TBL_WMS_PICKING_LOG": {
       "fact_alias": "wpl",
       "label": "MES领料记录",
       "default_for_keywords": [
-        "MES领料记录"
+        "MES领料记录",
+        "领料记录",
+        "领料"
       ],
       "mappings": [
         {
@@ -18986,15 +19360,16 @@
           ],
           "select": [
             {
-              "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "expr": "wpl.CUSER_NAME",
+              "as": "领料人账号"
             },
             {
-              "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "领料人姓名"
             }
           ],
-          "forbidden": []
+          "forbidden": [],
+          "match_type": "account"
         }
       ],
       "display_columns": [
@@ -19013,10 +19388,12 @@
       ]
     },
     "TBL_WMS_PICKING_LOG_DTL": {
-      "fact_alias": "wpl",
+      "fact_alias": "wpld",
       "label": "领料记录明细",
       "default_for_keywords": [
-        "领料记录明细"
+        "领料记录明细",
+        "领料明细",
+        "领料人记录明细"
       ],
       "mappings": [
         {
@@ -19028,7 +19405,7 @@
             {
               "alias": "wmsit",
               "table": "TBL_WMS_ITEM_BARCODE",
-              "on": "wmsit.CID = wpl.CBARCODE_ID"
+              "on": "wmsit.CID = wpld.CBARCODE_ID"
             }
           ],
           "select": [
@@ -19060,7 +19437,13 @@
             {
               "alias": "wmspi",
               "table": "TBL_WMS_PICKING_LOG",
-              "on": "wmspi.CID = wpl.CPICKING_ID"
+              "on": "wmspi.CID = wpld.CPICKING_ID"
+            },
+            {
+              "alias": "sysus",
+              "table": "TBL_SYS_USER",
+              "on": "sysus.CUSER_NAME = wmspi.CUSER_NAME",
+              "depends_on": "wmspi"
             }
           ],
           "select": [
@@ -19070,7 +19453,11 @@
             },
             {
               "expr": "wmspi.CUSER_NAME",
-              "as": "领料人，对应TBL_SYS_USER.CUSER_NAME"
+              "as": "领料人账号"
+            },
+            {
+              "expr": "sysus.CDISPLAY_NAME",
+              "as": "领料人姓名"
             }
           ],
           "forbidden": []
@@ -19078,11 +19465,11 @@
       ],
       "display_columns": [
         {
-          "expr": "wpl.CQTY",
+          "expr": "wpld.CQTY",
           "as": "领料数量"
         },
         {
-          "expr": "wpl.CREMARK",
+          "expr": "wpld.CREMARK",
           "as": "备注"
         }
       ]
@@ -20572,6 +20959,7 @@
     "p.CPROCESS_ID 作工序主键（须 p.CID = 事实表.CPROCESS_ID）",
     "wc.CWC_NAME AS [工序名称] 或 p.CPROCESS_NAME AS [工作中心名称]",
     "查采购订单明细时只 FROM TBL_SRM_PO 不 JOIN TBL_SRM_PO_DETAIL",
-    "问句含 PO/POA 采购单号却不写 WHERE srmpo.CPO（须 JOIN TBL_SRM_PO）"
+    "问句含 PO/POA 采购单号却不写 WHERE srmpo.CPO（须 JOIN TBL_SRM_PO）",
+    "无时间条件的明细列表查询省略 ORDER BY（须按主时间列 DESC 由近到远）"
   ]
 }
