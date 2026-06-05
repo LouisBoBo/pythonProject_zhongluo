@@ -104,11 +104,118 @@ def fix_orphan_nolock_lines(sql: str) -> str:
     return s
 
 
+def _cstate_case_sql(alias: str) -> str:
+    return (
+        f"CASE UPPER(RTRIM({alias}.CSTATE)) WHEN 'A' THEN N'有效' "
+        f"WHEN 'D' THEN N'无效' ELSE {alias}.CSTATE END AS [状态标识]"
+    )
+
+
+_CSTATE_CASE_BLOCK = re.compile(
+    r"CASE\s+UPPER\s*\(\s*RTRIM\s*\(\s*(\w+)\.CSTATE\s*\)\s*\)\s+"
+    r"WHEN\s+'A'\s+THEN\s+N'有效'[\s\S]*?END\s+AS\s+\[[^\]]+\]",
+    re.I,
+)
+_CSTATE_BARE = re.compile(
+    r",?\s*(\w+)\.CSTATE\s+AS\s+\[[^\]]+\]",
+    re.I,
+)
+
+
+def _cleanup_select_commas(sql: str) -> str:
+    out = re.sub(r",\s*,", ",", sql)
+    out = re.sub(r"SELECT\s+,", "SELECT ", out, flags=re.I)
+    out = re.sub(r",\s+(?=FROM\b)", " ", out, flags=re.I)
+    return out
+
+
+def _fix_cstate_columns(sql: str) -> str:
+    """CSTATE 只保留一列 [状态标识]：A→有效，D→无效；去掉 [状态中文] 等重复列。"""
+    if ".CSTATE" not in sql.upper():
+        return sql
+
+    alias_m = re.search(r"(\w+)\.CSTATE\b", sql, re.I)
+    if not alias_m:
+        return sql
+    alias = alias_m.group(1)
+    canonical = _cstate_case_sql(alias)
+
+    out = sql
+    # 错误写法：缺少 D 分支或 ELSE 全标有效
+    out = re.sub(
+        r"CASE\s+UPPER\s*\(\s*RTRIM\s*\(\s*(\w+)\.CSTATE\s*\)\s*\)\s+"
+        r"WHEN\s+'A'\s+THEN\s+N'有效'\s+ELSE\s+N'有效'\s+END\s+AS\s+\[[^\]]+\]",
+        lambda m: _cstate_case_sql(m.group(1)),
+        out,
+        flags=re.I,
+    )
+
+    blocks = list(_CSTATE_CASE_BLOCK.finditer(out))
+    if blocks:
+        first = True
+        new_out = ""
+        last = 0
+        for m in blocks:
+            header = out[m.start() : m.end()]
+            is_status_cn = "状态中文" in header
+            is_dup_status_id = "状态标识" in header and not first
+            if is_status_cn or is_dup_status_id:
+                new_out += out[last : m.start()]
+                last = m.end()
+                continue
+            if first:
+                new_out += out[last : m.start()] + canonical
+                first = False
+            else:
+                new_out += out[last : m.start()]
+            last = m.end()
+        out = new_out + out[last:]
+    else:
+        out = _CSTATE_BARE.sub(lambda m: _cstate_case_sql(m.group(1)), out)
+
+    if canonical not in out and ".CSTATE" in out.upper():
+        out = re.sub(
+            r"(SELECT\s+)",
+            r"\1" + canonical + ", ",
+            out,
+            count=1,
+            flags=re.I,
+        )
+
+    return _cleanup_select_commas(out)
+
+
+def fix_enum_display_columns(sql: str) -> str:
+    """将裸码值列替换为 CASE 译码（映射表已配置但 LLM 常仍输出裸字段）。"""
+    out = sql
+    try:
+        from mes_dimension_rules import apply_sql_display_rewrites
+
+        out = apply_sql_display_rewrites(out)
+    except ImportError:
+        pass
+
+    patterns = [
+        (
+            re.compile(r"(\w+)\.CIS_ONLINE\s+AS\s+\[是否在线\]", re.I),
+            r"CASE UPPER(RTRIM(\1.CIS_ONLINE)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE \1.CIS_ONLINE END AS [是否在线]",
+        ),
+        (
+            re.compile(r"(\w+)\.CIS_LOCKED_OUT\s+AS\s+\[是否锁定\]", re.I),
+            r"CASE UPPER(RTRIM(\1.CIS_LOCKED_OUT)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE \1.CIS_LOCKED_OUT END AS [是否锁定]",
+        ),
+    ]
+    for pat, repl in patterns:
+        out = pat.sub(repl, out)
+    return _fix_cstate_columns(out)
+
+
 def fix_mes_sql(sql: str) -> str:
     s = fix_nolock_linebreaks(sql)
     s = fix_orphan_nolock_lines(s)
     s = fix_nolock_linebreaks(s)
     s = repair_truncated_assay_user_join(s)
+    s = fix_enum_display_columns(s)
     return s
 
 

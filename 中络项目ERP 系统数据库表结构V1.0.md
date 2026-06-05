@@ -7012,7 +7012,14 @@ Return: 退货 |
 | 字段名 | 字段类型 | 是否为空 | 默认值 | 说明 |
 |--------|----------|----------|--------|------|
 | recId | int | 否 | - | 主键 |
-- **关联关系**：无
+| itemId | int? | 是 | - | 项目/明细 ID（可空） |
+| contractItemNumber | string | 是 | - | 合同明细号（可空） |
+| custcomplaintNumber | string | 是 | - | 客诉编号（如 KSA221202001） |
+| enterDate | DateTime? | 是 | - | 录入日期 |
+| creatorId | int? | 是 | - | 建单人，对应 T_User.recId（可空，JOIN 须 LEFT） |
+- **关联关系**：
+  - S_Complainment.creatorId = T_User.recId
+- **注意**：**无** `businessManId`、`complainmentNo`、`customerName` 等列；查列表须 SELECT 上表字段，禁止臆造列名
 
 ---
 
@@ -7596,7 +7603,6 @@ Introduction: 介绍 |
 | version | int? | 是 | - | 记录版本 |
 | customerId | int? | 是 | - | 客户，对应S_Customer.recId |
 | myId | int? | 是 | - | 审批人，对应T_User.recId |
-| sale | string | 是 | - | - |
 - **关联关系**：
   - S_CustomerHistory.customerId = S_Customer.recId
   - S_CustomerHistory.myId = T_User.recId
@@ -7636,7 +7642,6 @@ Introduction: 介绍 |
 | version | int? | 是 | - | 记录版本 |
 | customerId | int? | 是 | - | 客户，对应S_Customer.recId |
 | myId | int? | 是 | - | 审批人，对应T_User.recId |
-| sale | string | 是 | - | - |
 - **关联关系**：
   - S_CustomerWF.customerId = S_Customer.recId
   - S_CustomerWF.myId = T_User.recId

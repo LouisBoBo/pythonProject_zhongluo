@@ -73,6 +73,13 @@
   - **`srmre.CSTATUS` 须 CASE 译码**（`BARCODE_STORAGE`→已收货，`BARCODE_DELIVERY`→运输中，`BARCODE_STOCK`→已入库），**禁止**裸写英文码；
 - **尾数仓操作记录**：
   - 事实表 **`TBL_WMS_MANTISSA_RECORD`**（别名 `wmr`）；`CSTATUS`→`[状态]`（`1`已入仓、`2`已出仓），**禁止** `WHEN 1 THEN N'已入仓、2已出仓'` 整段说明写入 CASE；
+- **系统用户 / 用户明细（列表）**：
+  - 「用户明细」「系统用户」「用户信息」「用户列表」「查询用户」等同义，事实表须为 **`TBL_SYS_USER`**（别名常为 `u` 或 `sysu`），**禁止**误用其它表；
+  - **列全集（用户未点名只要某几列时必做）**：`SELECT` 须包含【参考表结构】中 `TBL_SYS_USER` 的**全部业务列**：`CID`、`CUSER_NAME`、`CDISPLAY_NAME`、`CUSER_TYPE`、`CGENDER`、`CEMAIL`、`CMOBILEPHONE`、`CORG_CODE`、`CCUR_HOST`、`CDEFAULT_HOST`、`CIS_LOCKED_OUT`、`CIS_ONLINE`、`CSTATE`、`CDATETIME_LAST_LOGIN`、`CDATETIME_LAST_LOCKED_OUT`、`CFAILED_ATTEMPT_COUNT`、`CFAILED_ATTEMPT_START`，每列 **`AS [中文说明]`**（如 `CUSER_NAME`→`[用户账号]`、`CDISPLAY_NAME`→`[用户姓名]`）；**严禁**输出 **`CPASSWORD`**；**禁止**只输出 `CUSER_NAME`、`CDISPLAY_NAME`、`CUSER_TYPE` 等 3 列左右的子集；
+  - **`CSTATE` 只输出一列 `[状态标识]`**：**必须** `CASE UPPER(RTRIM(u.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE u.CSTATE END AS [状态标识]`（`A`→有效，`D`→无效，须与库中 A/D 一一对应）；**禁止**裸写 `u.CSTATE`；**禁止**再输出 `[状态]`、`[状态中文]`、`[状态标识，A：有效；D：无效]` 等第二列；**禁止** `ELSE N'有效'` 把非 A 行全标成有效；用户未要求「仅有效用户」时**禁止** `WHERE u.CSTATE='A'` 过滤；
+  - **组织编号**须 **`LEFT JOIN dbo.TBL_SYS_ORGANIZATION org WITH (NOLOCK) ON org.CID = u.CORG_CODE`**，**同时输出** `org.CORG_NO AS [组织编码]`、`org.CORG_NAME AS [组织名称]`；**禁止**只裸输出 `CORG_CODE AS [组织编号]` 而无组织名称；
+  - 用户问「用户角色」时须 **`LEFT JOIN dbo.TBL_SYS_USER_ROLE_MAP urm WITH (NOLOCK) ON urm.CUSER_ID = u.CID`**、**`LEFT JOIN dbo.TBL_SYS_ROLE r WITH (NOLOCK) ON r.CID = urm.CROLE_ID`**，输出 `r.CROLE_CODE AS [角色编码]`、`r.CROLE_NAME AS [角色名称]`（一用户多角色时按 `u.CID, r.CID` 多行展示，**禁止**臆造列名）；
+  - 无时间 WHERE 时：`ORDER BY u.CUSER_NAME DESC`；若输出含最后登录时间，可用 `ORDER BY u.CDATETIME_LAST_LOGIN DESC, u.CID DESC`。
 
 
 **`WITH (NOLOCK)` 写法（硬约束 · 高于一切排版习惯）**：
@@ -129,11 +136,13 @@
   - 「上上个月 / 前两个月」→ 当前月减 2 的自然月；
   - 「今天 / 当日」→ 当天 `[00:00:00, 次日 00:00:00)`；
   - 「昨天」→ 当前日减 1 的整天；
-  - 「本周 / 上周 / 最近 7 天 / 最近 30 天」→ 按当前日向前推算；
+  - 「本周 / 上周 / 最近 7 天 / 近7天 / 最近 30 天」→ **必须以【当前系统时间】为终点向前推算**，禁止照抄提示词示例或【上一次SQL】里的历史日期；
+  - **「近7天 / 最近7天」计算公式**（含当天）：设今天日期为 `T`，则 `>= (T减6天) 00:00:00` 且 `< (T加1天) 00:00:00`（半开区间共 7 个自然日）；例：`T=2026-06-05` → `>= '2026-05-30 00:00:00' AND < '2026-06-06 00:00:00'`；
   - 仅「3月 / 三月份」等**无年份**→ 默认**当前年**；若该月**晚于**当前月（如当前 5 月问「3月」）则视为**去年**该月。
-- **示例**（当前系统时间 = `2026-05-23`）：「上个月生产工单」→ `>= '2026-04-01 00:00:00' AND < '2026-05-01 00:00:00'`；「本月」→ `>= '2026-05-01 00:00:00' AND < '2026-06-01 00:00:00'`。
+- **示例**（当前系统时间 = `2026-05-23`）：「上个月生产工单」→ `>= '2026-04-01 00:00:00' AND < '2026-05-01 00:00:00'`；「本月」→ `>= '2026-05-01 00:00:00' AND < '2026-06-01 00:00:00'`；「近7天生产工单」→ `>= '2026-05-17 00:00:00' AND < '2026-05-24 00:00:00'`（**仅当**当前日为 2026-05-23 时成立，换日期须重算）。
 - 用户**明确**给出完整年月日或年份时，以用户为准，不再按相对时间覆盖。
 - 日期过滤列须为【参考表结构】中该表真实存在的日期/时间字段（如 `CSTART_TIME`、`CAPPLY_DATE`），且须确认列属于当前 `FROM` 表。
+- **生产工单 / 近N天工单**：事实表 **`TBL_MO`**（别名 `mo`）；「近7天」等相对时间默认按 **`mo.CPLAN_START_TIME`**（预计生产时间）过滤，**禁止**照抄【上一次SQL】中的旧 `WHERE` 日期。
 
 
 
@@ -163,19 +172,14 @@
 2. **SQL 修复（必加，否则 error 102 会反复出现）**：在 SQL 生成 LLM 与 **rookie_text2data** 之间增加代码节点，复制 **`读取json配置维表/fix_mes_sql_nolock.py`**，入参 `sql`←上一步 SQL，出参 **`fixed_sql`** **必须**接到 text2data（不要仍用未修复的 `sql`）。修复：合并 `\n\nWITH (NOLOCK)`、补全末尾 `sysus4`/`u_s` 截断。
 3. 相对时间见下。
 
-**相对时间依赖【当前系统时间】**：在 SQL 生成 LLM 节点前增加「代码」节点，将 Dify 系统变量 **`sys.timestamp`**（Unix 秒）格式化为 **`YYYY-MM-DD HH:MM:SS`（Asia/Shanghai）** 写入出参 `current_datetime` 并接到下方占位符；**禁止**留空让模型自行猜年月。
+**相对时间依赖【当前系统时间】**：在 SQL 生成 LLM 节点前增加「代码」节点（复制 **`读取MES配置维表/dify_current_datetime.py`**），出参 `current_datetime`（**北京时间 UTC+8**）接到下方占位符。**无需配置入参**；可选接 `sys.timestamp` 覆盖。
 
-```python
-from datetime import datetime, timezone, timedelta
-def main(timestamp: float) -> dict:
-    tz = timezone(timedelta(hours=8))
-    dt = datetime.fromtimestamp(timestamp, tz=tz)
-    return {"current_datetime": dt.strftime("%Y-%m-%d %H:%M:%S")}
-# 入参：timestamp ← sys.timestamp
-```
+- **禁止**用 Dify 内置「获取当前时间」工具：它返回 **UTC**，会比北京时间**少 8 小时**。
+- 出参：`current_datetime` → 提示词 `{{#current_datetime#}}`
 
 
 
+【当前系统时间】{{#1780627765236.current_datetime#}}
 【参考表结构】{{#context#}}
 【用户问题】{{#1776736092059.text#}}
 【规则约束】{{#conversation.rule_list#}}

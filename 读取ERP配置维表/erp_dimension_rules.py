@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-根据 mes_dimension_joins.json 为指定事实表生成【维表映射规则】文本，供 Dify 注入
+根据 erp_dimension_joins.json 为指定事实表生成【维表映射规则】文本，供 Dify 注入
 【新加强制约束】/ query_rules。
 
 Dify 代码节点示例入参：
-  - fact_table: "TBL_SFC_WS_LOG"（可空，空则从 user_question 推断）
+  - fact_table: "FGI_ReceiptItem"（可空，空则从 user_question 推断）
   - user_question: "查最近一个月生产记录"
   - mapping_ids: 可选，逗号分隔或列表，只生成部分映射（如 "work_center,process"）
-  - config_json: 可选，mes_dimension_joins.json 全文（字符串）；Dify 无法读本地文件时用
+  - config_json: 可选，erp_dimension_joins.json 全文（字符串）；Dify 无法读本地文件时用
   - config_path: 可选，json 文件路径（代码节点与 json 同目录上传时一般不必传）
 
-配置加载优先级：config_json 参数 > 环境变量 MES_DIMENSION_JOINS_JSON > config_path > 与 .py 同目录的 mes_dimension_joins.json
+配置加载优先级：config_json 参数 > 环境变量 ERP_DIMENSION_JOINS_JSON > config_path > 与 .py 同目录的 erp_dimension_joins.json
 
 出参：
   - query_rules: 注入 LLM 的 Markdown 规则块
@@ -19,8 +19,8 @@ Dify 代码节点示例入参：
   - join_tables: 本次涉及维表列表（去重）
 
 本地 CLI：
-  python mes_dimension_rules.py TBL_SFC_WS_LOG
-  python mes_dimension_rules.py --question "生产记录" 
+  python erp_dimension_rules.py FGI_ReceiptItem
+  python erp_dimension_rules.py --question "制成品接收明细" 
 """
 
 from __future__ import annotations
@@ -32,7 +32,10 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "mes_dimension_joins.json"
+try:
+    _CONFIG_PATH = Path(__file__).resolve().parent / "erp_dimension_joins.json"
+except NameError:
+    _CONFIG_PATH = Path("erp_dimension_joins.json")
 # 由 build_dify_bundle.py 注入；Dify 单文件代码节点依赖此项，无需同目录 json
 _EMBEDDED_CONFIG: Optional[Dict[str, Any]] = None
 
@@ -41,8 +44,8 @@ def load_config(
     path: Optional[Union[str, Path]] = None,
     config_json: str = "",
 ) -> Dict[str, Any]:
-    """加载映射配置。Dify 等环境优先传 config_json 或设环境变量 MES_DIMENSION_JOINS_JSON。"""
-    raw = (config_json or os.environ.get("MES_DIMENSION_JOINS_JSON") or "").strip()
+    """加载映射配置。Dify 等环境优先传 config_json 或设环境变量 ERP_DIMENSION_JOINS_JSON。"""
+    raw = (config_json or os.environ.get("ERP_DIMENSION_JOINS_JSON") or "").strip()
     if raw:
         return json.loads(raw)
     if path:
@@ -56,13 +59,24 @@ def load_config(
 
 
 def _normalize_table_name(name: str) -> str:
-    n = (name or "").strip().upper()
+    """ERP 表名保留文档中的大小写（如 FGI_ReceiptItem）。"""
+    return (name or "").strip()
+
+
+def _resolve_table_key(name: str, tables: Dict[str, Any]) -> str:
+    """与 parse_dimension_map 写入的大写表名对齐。"""
+    n = _normalize_table_name(name)
     if not n:
-        return ""
-    if not n.startswith("TBL_"):
-        if n.startswith("SFC_") or n.startswith("BD_") or n.startswith("MO"):
-            n = "TBL_" + n
-    return n
+        return n
+    if n in tables:
+        return n
+    upper = n.upper()
+    if upper in tables:
+        return upper
+    for key in tables:
+        if key.upper() == upper:
+            return key
+    return upper
 
 
 def infer_fact_table(
@@ -70,24 +84,20 @@ def infer_fact_table(
     fact_table: str = "",
     config: Optional[Dict[str, Any]] = None,
 ) -> str:
-    explicit = _normalize_table_name(fact_table)
-    if explicit and (config is None or explicit in config.get("tables", {})):
-        return explicit
-
     cfg = config or load_config()
     tables: Dict[str, Any] = cfg.get("tables", {})
+    explicit = _resolve_table_key(fact_table, tables) if fact_table else ""
+    if explicit and explicit in tables:
+        return explicit
+
     q = (user_question or "").strip()
+    default_table = explicit or _resolve_table_key("FGI_ReceiptItem", tables)
+    if default_table not in tables and tables:
+        default_table = next(iter(tables))
     if not q:
-        return explicit or "TBL_SFC_WS_LOG"
+        return default_table
 
-    ws_log_hints = (
-        "生产记录", "报工", "工位", "WS_LOG", "开工", "完工",
-        "是否已审核", "是否完工", "是否已过数", "工作数量", "工作类型",
-    )
-    mo_hints = ("工单", "MO_LOT", "批次", "生产工单")
     detail_hints = ("明细", "详情", "列表", "列出", "展示", "查看")
-    agg_hints = ("统计", "数量", "多少", "个数", "合计", "总计", "COUNT")
-
     scores: Dict[str, int] = {}
     for tname, tcfg in tables.items():
         score = 0
@@ -97,39 +107,12 @@ def infer_fact_table(
         scores[tname] = score
 
     has_detail = any(h in q for h in detail_hints)
-    has_agg = any(h in q for h in agg_hints)
-    has_ws = any(h in q for h in ws_log_hints)
-    has_mo = any(h in q for h in mo_hints)
-
-    if has_ws:
-        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 12
-    if has_detail and has_ws:
-        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 25
-    if has_detail and has_mo and not has_agg:
-        scores["TBL_SFC_WS_LOG"] = scores.get("TBL_SFC_WS_LOG", 0) + 18
-    if has_mo and has_agg and not has_ws:
-        scores["TBL_MO"] = scores.get("TBL_MO", 0) + 20
-    if "生产工单" in q and has_agg:
-        scores["TBL_MO"] = scores.get("TBL_MO", 0) + 15
-
-    po_detail_hints = (
-        "采购订单明细", "采购单明细", "采购明细", "PO明细", "采购订单行",
-    )
-    po_detail_context = has_detail or any(
-        h in q for h in ("明细", "详情", "行项目", "物料行")
-    )
-    if any(h in q for h in po_detail_hints) or (
-        po_detail_context and re.search(r"\bP[OA]\w+", q, re.I)
-    ):
-        scores["TBL_SRM_PO_DETAIL"] = scores.get("TBL_SRM_PO_DETAIL", 0) + 30
-
-    po_master_hints = ("采购单", "采购订单", "SRM采购")
-    if (
-        any(h in q for h in po_master_hints)
-        and not po_detail_context
-        and "交付" not in q
-    ):
-        scores["TBL_SRM_PO"] = scores.get("TBL_SRM_PO", 0) + 28
+    item_key = _resolve_table_key("FGI_ReceiptItem", tables)
+    receipt_key = _resolve_table_key("FGI_Receipt", tables)
+    if has_detail and item_key:
+        scores[item_key] = scores.get(item_key, 0) + 15
+    if "接收" in q and not has_detail and receipt_key:
+        scores[receipt_key] = scores.get(receipt_key, 0) + 12
 
     best_table = ""
     best_score = 0
@@ -140,30 +123,46 @@ def infer_fact_table(
     if best_table:
         return best_table
 
-    m = re.search(r"\b(TBL_[A-Z0-9_]+)\b", q, re.I)
+    for tname in tables:
+        if tname in q or tname.upper() in q.upper():
+            return tname
+    m = re.search(
+        r"\b((?:T_|FGI_|M_|S_|F_|G_|P_|W_)[A-Za-z0-9_]+)\b",
+        q,
+    )
     if m:
-        cand = _normalize_table_name(m.group(1))
+        cand = _resolve_table_key(m.group(1), tables)
         if cand in tables:
             return cand
 
-    return explicit or "TBL_SFC_WS_LOG"
+    return default_table
 
 
-# 事实表混查时，除 JOIN 别名外常见的「直接 FROM」别名（如工单语境下仍 FROM 生产记录表 l）
+# 事实表混查时，除 JOIN 别名外常见的「直接 FROM」别名（ERP 主从表联查）
 _COMPANION_DIRECT_ALIASES: Dict[str, Dict[str, str]] = {
-    "TBL_MO": {"l": "TBL_SFC_WS_LOG"},
+    "FGI_ReceiptItem": {"fr": "FGI_Receipt"},
+    "M_BOMIssueItem": {"mbi": "M_BOMIssue"},
+    "M_BOMPicklistItem": {"bp": "M_BOMPicklist"},
+    "P_WO": {"mo": "P_MO"},
 }
 
 # 用户问「××明细/详情」且未点名只要某几列时，SELECT 须包含该表全部展示列与映射列
-_FULL_DETAIL_SELECT_TABLES: Set[str] = {"TBL_SRM_PO_DETAIL"}
+_FULL_DETAIL_SELECT_TABLES: Set[str] = {
+    "FGI_ReceiptItem",
+    "M_PurchaseOrderItem",
+    "M_BOMPicklistItem",
+    "M_BOMIssueItem",
+    "S_COMPLAINMENT",
+}
 
-# 同名 CSTATUS 等字段在不同表含义不同，混查时须分表译码
+# 同名 status/type 等字段在不同 ERP 表含义不同，混查时须分表译码
 _STATUS_FIELD_DISAMBIG: Dict[str, str] = {
-    "TBL_SFC_WS_LOG": "生产记录审核状态（0待审核/1已通过/2已驳回）→ 列名 [状态]",
-    "TBL_MO": "工单发放状态（2已发放/5已取消/6已暂停/7外协）→ 列名 [工单状态]",
-    "TBL_EAM_REPAIR": "维修工单状态（英文码）→ 列名 [工单状态]",
-    "TBL_QM_INSPECT_RECORD": "检验状态 → 列名 [状态]（与生产记录 [状态] 不同）",
-    "TBL_SFC_PACKAGE": "包装条码状态 → JOIN TBL_SYS_DICTIONARY 取 CDIC_DESC，列名 [状态]（非库存状态）",
+    "P_MO": "制造订单单据状态/投产类型 → 列名 [单据状态]/[投产类型]（与 P_WO.status 不同）",
+    "P_WO": "工单状态（1外协/2未发放/3已发放/4暂停/5取消/6完成）→ 列名 [工单状态]",
+    "M_BOMPicklist": "领料单审批状态（Pending/Approved）→ 列名 [审批状态]",
+    "M_Requisitions": "请购单状态（Valid已审核/Active审核中）→ 列名 [请购单状态]",
+    "S_Job": "产品型号审批状态 → 列名 [审批状态]（与 M_BOMPicklist 不同）",
+    "FGI_Receipt": "接收单来源类型（Customer/Outsourcing）→ 列名 [来源类型]",
 }
 
 
@@ -235,7 +234,7 @@ def _append_mixed_table_enum_rules(
     fact_alias: str,
     config: Dict[str, Any],
 ) -> None:
-    """工单/生产记录等混查：为 JOIN 表及常见别名追加独立枚举 CASE，避免 CSTATUS 等同名字段串表。"""
+    """ERP 主从/联表混查：为 JOIN 表及常见别名追加独立枚举 CASE，避免 status/type 等同名字段串表。"""
     join_aliases = _collect_join_aliases(fact_table, config)
     if not join_aliases:
         return
@@ -279,7 +278,7 @@ def _append_mixed_table_enum_rules(
         "SELECT 含下列列且来自关联表时，**必须**用本段 CASE，禁止裸 `0`/`Y`/`N`）"
     )
     lines.append(
-        f"- 事实表 `{fact_table}`（别名 `{fact_alias}`）与下列表**同名不同义**（尤其 `CSTATUS`），"
+        f"- 事实表 `{fact_table}`（别名 `{fact_alias}`）与下列表**同名不同义**（尤其 `status`/`type`），"
         "不可互用 CASE 或裸字段。"
     )
     lines.extend(blocks)
@@ -298,13 +297,13 @@ def build_query_rules(
     fact_alias: Optional[str] = None,
 ) -> str:
     cfg = config or load_config()
-    tname = _normalize_table_name(fact_table)
     tables: Dict[str, Any] = cfg.get("tables", {})
+    tname = _resolve_table_key(fact_table, tables)
     if tname not in tables:
         known = ", ".join(sorted(tables.keys()))
         return (
             f"【维表映射规则】未配置事实表 `{tname}`。"
-            f"请在 mes_dimension_joins.json 的 tables 中补充。当前已配置：{known}"
+            f"请在 erp_dimension_joins.json 的 tables 中补充。当前已配置：{known}"
         )
 
     tcfg = tables[tname]
@@ -320,11 +319,11 @@ def build_query_rules(
     lines: List[str] = [
         f"【维表映射规则·自动生成】事实表：**{tname}**（{label}），别名 **`{alias}`**。",
         "生成 SQL 时**必须**按下述 JOIN 与 SELECT 展示列执行（片段无对应维表则跳过该条并在【相关表】说明）。",
-        "**列表/明细查询**：`SELECT` 中**每一个**输出列都必须 `AS [中文列名]`，禁止裸写 `l.CSTART_TIME` 等英文字段名作为表头。",
+        "**列表/明细查询**：`SELECT` 中**每一个**输出列都必须 `AS [中文列名]`，禁止裸写 `fr.code` 等英文字段名作为表头。",
     ]
     if full_detail:
         lines.append(
-            "**本表为采购类明细**：用户问某单号+明细/详情且**未**点名只要某几列时，"
+            "**本表为 ERP 明细表**：用户问某单号+明细/详情且**未**点名只要某几列时，"
             "`SELECT` 须包含下文**全部**「事实表本表列」与各映射「必须列」，"
             "禁止只输出主键、外键 ID、单号、单位、数量、备注等少量列。"
         )
@@ -354,7 +353,7 @@ def build_query_rules(
     if enum_mps:
         lines.append(
             "### 【最高优先级·枚举/码值译码】（下列列必须**整段**写入 SELECT，"
-            "禁止 `er.CSTATUS`/`er.CIS_PRODUCT` 等裸字段或裸码值）"
+            "禁止 `er.status`/`er.approveStatus` 等裸字段或裸码值）"
         )
         for mp in enum_mps:
             fcols = ", ".join(mp.get("fact_columns") or [])
@@ -387,7 +386,7 @@ def build_query_rules(
             expr = _apply_alias(dc.get("expr") or "", alias)
             as_name = dc.get("as") or ""
             lines.append(f"  - `{expr} AS [{as_name}]`")
-        lines.append("- **禁止**：本表列无 `AS`（如 `l.CSTATUS`）；外键 ID 列单独展示（须用下方维表中文列替代）。")
+        lines.append("- **禁止**：本表列无 `AS`（如 `fr.status`）；外键 *Id 列单独展示（须用下方维表中文列替代）。")
         lines.append("")
 
     seen_joins: Set[str] = set()
@@ -404,8 +403,6 @@ def build_query_rules(
         lines.append(f"### 映射 `{mid}`（事实列：{', '.join(fact_cols)}）")
         if mp.get("notes"):
             lines.append(f"- 说明：{mp['notes']}")
-        if mp.get("match_type") == "account":
-            lines.append("- 类型：**账号字符串** → `TBL_SYS_USER.CUSER_NAME`，姓名取 `CDISPLAY_NAME`。")
         elif mp.get("match_type") == "enum":
             lines.append("- 类型：**枚举译码**（本表字段，无需 JOIN；`SELECT` 必须用下方 CASE，禁止裸数字列）。")
 
@@ -452,7 +449,7 @@ def build_query_rules(
     lines.append(
         f"- 是否已 `FROM dbo.{tname} {alias} WITH (NOLOCK)`（hint 与表名**同一行**，禁止换行写 `WITH`）；"
         f"是否已包含上述全部 LEFT JOIN；"
-        f"工作中心/工序/人员列是否来自对应维表而非同源；"
+        f"人员/工厂/物料/客户等列是否来自对应维表（T_User.recId、M_Materials.recId 等）而非裸 ID；"
         f"**SELECT 每一列是否均有 `AS [中文名]`（含本表时间/状态/备注等列）**。"
     )
     if default_ob:
@@ -461,8 +458,8 @@ def build_query_rules(
         )
     if full_detail:
         lines.append(
-            "- **采购明细列全集**：`SELECT` 是否已包含上文全部「事实表本表列」与各映射「必须列」；"
-            "是否**未**裸输出 `spd.CITEM_ID`/`spd.CPO_ID`；是否**未**只选 6 列左右子集。"
+            "- **明细列全集**：`SELECT` 是否已包含上文全部「事实表本表列」与各映射「必须列」；"
+            "是否**未**裸输出 `*Id` 外键；是否**未**只选少量列子集。"
         )
 
     return "\n".join(lines).strip()
@@ -470,42 +467,54 @@ def build_query_rules(
 
 # 查询结果列名 -> 码值 -> 中文（LLM 仍输出裸码时的兜底，键统一为字符串）
 RESULT_COLUMN_VALUE_MAPS: Dict[str, Dict[str, str]] = {
-    "任务状态": {"0": "待执行", "1": "已执行", "2": "已关闭(未执行)"},
-    "工单状态": {
-        "2": "已发放",
-        "5": "已取消",
-        "6": "已暂停",
-        "7": "外协",
+    "审批状态": {
+        "Pending": "制作中",
+        "Approved": "审批通过",
+        "Submit": "提交",
+        "Waiting": "审批中",
+        "Rejected": "拒绝",
     },
-    "状态": {"0": "待审核", "1": "已通过", "2": "已驳回"},
-    "工作类型": {
-        "1": "正常生产记录(检验生产记录)",
-        "2": "批量生产记录",
-        "3": "无工单生产记录",
-        "4": "历史记录新增",
-        "5": "FQC生产记录",
+    "销售类型": {
+        "Bonded": "保税",
+        "ForDomestic": "内销",
+        "ForExport": "外销",
+    },
+    "投产类型": {
+        "SO": "正常投产(销售订单)",
+        "ReturnRepair": "退货返修",
+        "Replenishment": "补货",
+        "StockRepair": "仓库返修",
+        "ProVote": "生产补投",
+        "Merger": "合拼",
+        "MakeToStock": "存货补投",
+    },
+    "来源类型": {
+        "Customer": "客户",
+        "Outsourcing": "供应商",
+    },
+    "接收类型": {
+        "PO": "有采购接收",
+        "NPO": "无采购接收",
+        "MiscPO": "杂项采购接收",
+        "C": "寄售接收",
+    },
+    "采购类型": {
+        "S": "采购",
+        "M": "杂项",
+    },
+    "请购单状态": {
+        "Valid": "已审核",
+        "Active": "审核中",
+    },
+    "工单状态": {
+        "1": "外协",
+        "2": "未发放",
+        "3": "已发放",
+        "4": "暂停",
+        "5": "取消",
+        "6": "完成",
     },
     "是否已审核": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否完工": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否已过数": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否停产": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否紧急": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否在线": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "是否锁定": {"Y": "是", "N": "否", "y": "是", "n": "否"},
-    "状态标识": {"A": "有效", "D": "无效", "a": "有效", "d": "无效"},
-    "类型": {
-        "Merger": "合拼",
-        "MERGER": "合拼",
-        "Sample": "样本",
-        "SAMPLE": "样本",
-        "Batch": "批量生产",
-        "BATCH": "批量生产",
-    },
-    "工单状态": {
-        "EAM_REPAIR_STATUS_ASSIGNMENT": "维修指派",
-        "EAM_REPAIR_STATUS_COMPLETE": "维修完成",
-        "EAM_REPAIR_STATUS_CLOSE": "维修取消",
-    },
 }
 
 
@@ -543,8 +552,6 @@ def _select_rewrite_pairs(
                 f"{alias}.{fc} AS [{as_name}]",
                 f"{fc} AS [{as_name}]",
                 f"{alias}.{fc} AS [状态]",
-                f"{alias}.{fc} AS [状态中文]",
-                f"{alias}.{fc} AS [状态标识，A：有效；D：无效]",
             ):
                 pairs.append((bare, full))
 
@@ -562,14 +569,16 @@ def _select_rewrite_pairs(
 
 
 def _detect_sql_table_aliases(sql: str) -> Dict[str, str]:
-    """SQL 别名 → 表名（FROM/JOIN dbo.TBL_xxx alias WITH (NOLOCK)）。"""
+    """SQL 别名 → 表名（FROM/JOIN dbo.ERP表 alias WITH (NOLOCK)）。"""
     out: Dict[str, str] = {}
     for m in re.finditer(
-        r"(?:FROM|JOIN)\s+dbo\.(\w+)\s+(\w+)\s+WITH\s*(?:\(\s*)?NOLOCK",
+        r"(?:FROM|JOIN)\s+dbo\.("
+        r"(?:T_|FGI_|M_|S_|F_|G_|P_|W_|E_|EQ_|PM_)[A-Za-z0-9_]+"
+        r")\s+(\w+)\s+WITH\s*(?:\(\s*)?NOLOCK",
         sql,
         re.I,
     ):
-        out[m.group(2)] = _normalize_table_name(m.group(1))
+        out[m.group(2)] = m.group(1)
     return out
 
 
@@ -588,7 +597,7 @@ def apply_sql_display_rewrites(
     alias_map = _detect_sql_table_aliases(sql)
     if alias_map:
         for alias, tname in alias_map.items():
-            tcfg = tables.get(tname)
+            tcfg = tables.get(_resolve_table_key(tname, tables))
             if not tcfg:
                 continue
             for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
@@ -597,7 +606,7 @@ def apply_sql_display_rewrites(
 
     check_tables: List[str] = []
     if fact_table:
-        t = _normalize_table_name(fact_table)
+        t = _resolve_table_key(fact_table, tables)
         if t in tables:
             check_tables.append(t)
     else:
@@ -624,7 +633,7 @@ def decode_result_rows(
         return rows
     maps = dict(RESULT_COLUMN_VALUE_MAPS)
     cfg = config or load_config()
-    tname = _normalize_table_name(fact_table)
+    tname = _resolve_table_key(fact_table, cfg.get("tables") or {})
     tcfg = (cfg.get("tables") or {}).get(tname) or {}
     def _merge_case_map(expr: str, as_name: str) -> None:
         if not as_name or not expr.upper().startswith("CASE "):
@@ -665,7 +674,7 @@ def decode_result_rows(
 
 def list_join_tables(fact_table: str, config: Optional[Dict[str, Any]] = None) -> List[str]:
     cfg = config or load_config()
-    tname = _normalize_table_name(fact_table)
+    tname = _resolve_table_key(fact_table, cfg.get("tables") or {})
     tcfg = (cfg.get("tables") or {}).get(tname) or {}
     out: List[str] = []
     seen: Set[str] = set()
@@ -689,7 +698,7 @@ def build_enrichment_plan(
     返回列表项：dim_table, key_column, value_columns, sql_template
     """
     cfg = config or load_config()
-    tname = _normalize_table_name(fact_table)
+    tname = _resolve_table_key(fact_table, cfg.get("tables") or {})
     tcfg = (cfg.get("tables") or {}).get(tname) or {}
     alias = tcfg.get("fact_alias") or "l"
     cols = {c.upper() for c in column_names}
@@ -712,22 +721,25 @@ def build_enrichment_plan(
                         "dim_table": dim,
                         "fact_column": fc,
                         "sql": (
-                            f"SELECT DISTINCT u.CUSER_NAME, u.CDISPLAY_NAME "
+                            f"SELECT DISTINCT u.recId, u.employeeName, u.loginName "
                             f"FROM dbo.{dim} u WITH (NOLOCK) "
-                            f"WHERE u.CUSER_NAME IN ({{values}})"
+                            f"WHERE u.loginName IN ({{values}})"
                         ),
                     }
                 )
             else:
                 on = _apply_alias(j.get("on") or "", alias)
-                # wc.CID = l.CWC_ID -> dim key CID
-                m = re.search(r"(\w+)\.CID\s*=\s*" + re.escape(alias) + r"\.(\w+)", on, re.I)
+                m = re.search(
+                    r"(\w+)\.recId\s*=\s*" + re.escape(alias) + r"\.(\w+)",
+                    on,
+                    re.I,
+                )
                 if m:
                     dim_key, fact_col = m.group(1), m.group(2)
                     name_cols = []
                     for sel in mp.get("select") or []:
                         ex = sel.get("expr") or ""
-                        if dim_key in ex and "NAME" in ex.upper():
+                        if dim_key in ex:
                             name_cols.append(ex.split(".")[-1])
                     plans.append(
                         {
@@ -735,8 +747,8 @@ def build_enrichment_plan(
                             "dim_table": dim,
                             "fact_column": fact_col,
                             "sql": (
-                                f"SELECT d.CID, d.{name_cols[0] if name_cols else 'CWC_NAME'} "
-                                f"FROM dbo.{dim} d WITH (NOLOCK) WHERE d.CID IN ({{values}})"
+                                f"SELECT d.recId, d.{name_cols[0] if name_cols else 'name'} "
+                                f"FROM dbo.{dim} d WITH (NOLOCK) WHERE d.recId IN ({{values}})"
                             ),
                         }
                     )
@@ -758,13 +770,13 @@ def enrich_rows(
       "work_center": { 123: {"工作中心名称": "开料", "机台名称": "1#开料机"}, ... },
       "start_user": { "001855": {"开工人姓名": "张三"}, ... }
     }
-  键为 mes_dimension_joins.json 中的 mapping id。
+  键为 erp_dimension_joins.json 中的 mapping id。
     """
     if not rows or not lookups:
         return rows
 
     cfg = config or load_config()
-    tname = _normalize_table_name(fact_table)
+    tname = _resolve_table_key(fact_table, cfg.get("tables") or {})
     tcfg = (cfg.get("tables") or {}).get(tname) or {}
     col_to_mapping: Dict[str, str] = {}
     for mp in tcfg.get("mappings") or []:
@@ -836,15 +848,24 @@ def main_with_sql(
             path=kwargs.get("config_path") or None,
         )
         out["query_sql"] = sql
-        out["query_sql_fixed"] = apply_sql_display_rewrites(
+        rewritten = apply_sql_display_rewrites(
             sql, fact_table=out.get("fact_table") or "", config=cfg
         )
+        from erp_sql_fix_core import fix_erp_sql
+
+        out["query_sql_fixed"] = fix_erp_sql(rewritten)
+        out["fixed_sql"] = out["query_sql_fixed"]
     return out
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="生成 MES 维表映射规则文本")
-    parser.add_argument("fact_table", nargs="?", default="", help="事实表名，如 TBL_SFC_WS_LOG")
+    parser = argparse.ArgumentParser(description="生成 ERP 维表映射规则文本")
+    parser.add_argument(
+        "fact_table",
+        nargs="?",
+        default="",
+        help="事实表名，如 FGI_ReceiptItem（配置内为大写 FGI_RECEIPTITEM）",
+    )
     parser.add_argument("-q", "--question", default="", help="用户问题，用于推断事实表")
     parser.add_argument("-m", "--mappings", default="", help="只包含的 mapping id，逗号分隔")
     parser.add_argument("-c", "--config", default="", help="json 配置路径")

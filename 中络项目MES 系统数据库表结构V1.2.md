@@ -49,6 +49,7 @@
 | CPARENT_DIC_ID | long | 否 | - | 父字典ID，对应TBL_SYS_DICTIONARY.CID |
 | CSEQ | int? | 是 | - | 字典在分组中的顺序 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_DICTIONARY.CPARENT_DIC_ID = TBL_SYS_DICTIONARY.CID
 
@@ -63,6 +64,7 @@
 | CORG_NO | string | 是 | - | 组织编码 |
 | CPARENT_ORG_ID | long? | 是 | - | 上级组织ID，对应TBL_SYS_ORGANIZATION.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_ORGANIZATION.CPARENT_ORG_ID = TBL_SYS_ORGANIZATION.CID
   - TBL_SYS_USER_ORG_MAP.CORG_ID = TBL_SYS_ORGANIZATION.CID
@@ -88,6 +90,7 @@
 | CPARAM_VALUE_TYPE | string | 是 | - | 参数值类型(来自于数据字典(用于值转换):整型、字符串、BOOL、FLOAT) |
 | CREMARK | string | 是 | - | 备注信息 |
 | CSEQ | int? | 是 | - | 参数在分组中的顺序 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_PARAM.CPARAM_TYPE = TBL_SYS_PARAM_TYPE.CID
 
@@ -106,6 +109,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSEQ | int? | 是 | - | 父级下的顺序号 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_PARAM_TYPE.CPARENT_ID = TBL_SYS_PARAM_TYPE.CID
 
@@ -119,6 +123,7 @@
 | CROLE_CODE | string | 是 | - | 角色编码 |
 | CROLE_NAME | string | 是 | - | 角色名称 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_USER_ROLE_MAP.CROLE_ID = TBL_SYS_ROLE.CID
 
@@ -134,6 +139,7 @@
 | CSERVICE_PASSWORD | string | 是 | - | 服务密码 |
 | CSERVICE_PATH | string | 是 | - | 服务地址 |
 | CSERVICE_USER | string | 是 | - | 服务账号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -151,6 +157,7 @@
 | CFILE_NAME | string | 是 | - | 上传的模板文件名称 |
 | CFILE_PATH | string | 是 | - | 模板文件MinIO路径 |
 | CNAME | string | 是 | - | 模板名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -177,6 +184,7 @@
 | CUSER_NAME | string | 是 | - | 用户账号 |
 | CUSER_TYPE | string | 是 | - | 用户类型 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识 |
 - **关联关系**：
   - TBL_SYS_USER.CORG_CODE = TBL_SYS_ORGANIZATION.CID
   - TBL_SYS_USER_ORG_MAP.CUSER_ID = TBL_SYS_USER.CID
@@ -257,6 +265,7 @@
 | CIS_DEPT_MANAGER | string | 是 | - | 是否部门负责人 |
 | CORG_ID | long | 否 | - | 组织ID，对应TBL_SYS_ORGANIZATION.CID |
 | CUSER_ID | long | 否 | - | 用户ID，对应TBL_SYS_USER.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_USER_ORG_MAP.CUSER_ID = TBL_SYS_USER.CID
   - TBL_SYS_USER_ORG_MAP.CORG_ID = TBL_SYS_ORGANIZATION.CID
@@ -270,6 +279,7 @@
 |--------|----------|----------|--------|------|
 | CROLE_ID | long | 否 | - | 角色ID，对应TBL_SYS_ROLE.CID |
 | CUSER_ID | long | 否 | - | 用户ID，对应TBL_SYS_USER.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SYS_USER_ROLE_MAP.CUSER_ID = TBL_SYS_USER.CID
   - TBL_SYS_USER_ROLE_MAP.CROLE_ID = TBL_SYS_ROLE.CID
@@ -288,6 +298,7 @@
 | CUSTOMER_NAME | string | 是 | - | 客户名称 |
 | CUSTOMER_NO | string | 是 | - | 客户编号 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_CUSTOMER.CUSTOMER_NO = TBL_BD_ITEM.CUSTOMER_CODE
   - TBL_BD_CUSTOMER.CID = TBL_SFC_PACKAGE_LABEL_LINK.CCUSTOMER_ID
@@ -324,6 +335,7 @@
 | CUSTOMER_CODE | string | 是 | - | 客户代码 |
 | CWIDTH | decimal? | 是 | - | 宽度 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_ITEM.CITEM_TYPE_ID = TBL_BD_ITEM_TYPE.CID
   - TBL_BD_ITEM.CITEM_NO = TBL_BD_PROCESS_OUTS.CPRODUCT_ITEM_NO
@@ -375,6 +387,7 @@
 | CSEQ | int | 否 | - | 排序号 |
 | CSOURCE_ID | string | 是 | - | 来源系统ID |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_ITEM_TYPE.CID = TBL_BD_ITEM.CITEM_TYPE_ID
   - TBL_BD_ITEM_TYPE.CPARENT_TYPE_ID = TBL_BD_ITEM_TYPE.CID
@@ -400,6 +413,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSOURCE_ID | string | 是 | - | 来源系统ID |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_PROCESS.CPARENT_PROCESS_ID = TBL_BD_PROCESS.CID
   - TBL_BD_PROCESS.CID = TBL_BD_PROCESS_OUTS.CPROCESS_ID
@@ -439,6 +453,7 @@
 | CPROCESS_NO | string | 是 | - | 工序编码 |
 | CPROCESS_SHORT_CODE | string | 是 | - | 工序简称 |
 | CPRODUCT_ITEM_NO | string | 是 | - | 外协产品料号，对应TBL_BD_ITEM.CITEM_NO |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_PROCESS_OUTS.CPRODUCT_ITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_BD_PROCESS_OUTS.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -452,6 +467,7 @@
 |--------|----------|----------|--------|------|
 | CRULE_NAME | string | 是 | - | 规则名称 |
 | CRULE_NO | string | 是 | - | 规则编码 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_RULE.CID = TBL_BD_TEMPLATE.CRULE_ID
 
@@ -474,6 +490,7 @@
 | CSUPPLIER_SHORT_NO | string | 是 | - | 供应商简称编码 |
 | CUSER | string | 是 | - | 联系人 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_SUPPLIER.CID = TBL_WMS_ITEM_BARCODE.CSUPPLIER_ID
   - TBL_BD_SUPPLIER.CID = TBL_SRM_PO.CSUPPLIER_ID
@@ -494,6 +511,7 @@
 | CTEMPLATE_NO | string | 是 | - | 模板编码 |
 | CTEMPLATE_PATH | string | 是 | - | 模板层级路径 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_TEMPLATE.CTEMPLATE_GROUP_ID = TBL_BD_TEMPLATE_GROUP.CID
   - TBL_BD_TEMPLATE.CRULE_ID = TBL_BD_RULE.CID
@@ -509,6 +527,7 @@
 | CTEMPLATE_GROUP_NAME | string | 是 | - | 模板分组名称 |
 | CTEMPLATE_GROUP_NO | string | 是 | - | 模板分组编码 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_TEMPLATE_GROUP.CID = TBL_BD_TEMPLATE.CTEMPLATE_GROUP_ID
 
@@ -526,6 +545,7 @@
 | CWC_NAME | string | 是 | - | 工作中心名称 |
 | CWC_NO | string | 是 | - | 工作中心编码 |
 | CWC_TYPE | long? | 是 | - | 工作中心类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_WC.CPARENT = TBL_BD_WC.CID
   - TBL_BD_WC.CID = TBL_BD_WC_ITEMTYPE_LINK.CWC_ID
@@ -554,6 +574,7 @@
 | CITEM_TYPE_ID | long? | 是 | - | 物料类型ID，对应TBL_BD_ITEM_TYPE.CID |
 | CREMARK | string | 是 | - | 备注 |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_WC_ITEMTYPE_LINK.CWC_ID = TBL_BD_WC.CID
   - TBL_BD_WC_ITEMTYPE_LINK.CITEM_TYPE_ID = TBL_BD_ITEM_TYPE.CID
@@ -568,6 +589,7 @@
 | CPROCESS_ID | long | 否 | - | 工序ID，对应TBL_BD_PROCESS.CID |
 | CSEQ | int? | 是 | - | 工序顺序 |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_BD_WC_PROCESS_LINK.CWC_ID = TBL_BD_WC.CID
   - TBL_BD_WC_PROCESS_LINK.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -587,6 +609,7 @@
 | key | string | 是 | - | 参数名称 |
 | value | string | 是 | - | 参数值 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MD_DATASET.CID = TBL_MSG_EVENT.CDATASET_ID
 
@@ -612,6 +635,7 @@
 | CSEQ | int? | 是 | - | 序号 |
 | CTARGET | string | 是 | - | 目标 |
 | CTEMPLATE_ID | long? | 是 | - | 消息模板ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MSG_EVENT.CDATASET_ID = TBL_MD_DATASET.CID
   - TBL_MSG_EVENT.CMSG_GROUP_ID = TBL_MSG_GROUP.CID
@@ -629,6 +653,7 @@
 | CGROUP_NAME | string | 是 | - | 群组名称 |
 | CTHIRD_PARTY_PARAM | string | 是 | - | 第三方参数 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MSG_GROUP.CID = TBL_MSG_EVENT.CMSG_GROUP_ID
   - TBL_MSG_GROUP.CID = TBL_MSG_GROUP_USER.CGROUP_ID
@@ -642,6 +667,7 @@
 |--------|----------|----------|--------|------|
 | CGROUP_ID | long | 否 | - | 群组ID，对应TBL_MSG_GROUP.CID |
 | CUSER_ID | long | 否 | - | 用户ID，对应TBL_SYS_USER.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MSG_GROUP_USER.CGROUP_ID = TBL_MSG_GROUP.CID
   - TBL_MSG_GROUP_USER.CUSER_ID = TBL_SYS_USER.CID
@@ -656,6 +682,7 @@
 | CDESC | string | 是 | - | 描述 |
 | CSCHEDULE | string | 是 | - | 频率(Cron表达式) |
 | CSEQ | int? | 是 | - | 序号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -675,6 +702,7 @@
 | CSEND_TYPE | string | 是 | - | 发送类型 |
 | CSTATUS | int? | 是 | - | 状态 |
 | CUSER_ID | string | 是 | - | 处理人，对应TBL_SYS_USER.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MSG_SEND_LOG.CUSER_ID = TBL_SYS_USER.CID
 
@@ -689,6 +717,7 @@
 | CUSER_ID | long? | 是 | - | 用户表ID，对应TBL_SYS_USER.CID |
 | CUSER_NAME | string | 是 | - | 姓名 |
 | CUSER_TYPE | string | 是 | - | 类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MSG_USER.CUSER_ID = TBL_SYS_USER.CID
 
@@ -715,6 +744,7 @@
 | CLOT_NO | string | 是 | - | 批次号 |
 | CORDER_NO | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
 | CSTART_TIME | DateTime? | 是 | - | 报警开始时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_ALARM.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_ALARM.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -743,6 +773,7 @@
 | CTEST_TIME | string | 是 | - | 检测时间 |
 | CTOTAL_QTY | int? | 是 | - | 总数量 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_AOI_DETECTIONS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_AOI_DETECTIONS.CMAP_ITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -767,6 +798,7 @@
 | COORDINATE_Y | string | 是 | - | Y坐标 |
 | CPOSITION | string | 是 | - | 位置 |
 | CSERVER_IMG_PATH | string? | 是 | - | 服务器上图片路径 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_AOI_DETECTIONS_DTL.CDETECTION_ID = TBL_EAP_AOI_DETECTIONS.CID
 
@@ -786,6 +818,7 @@
 | CREQUEST | string | 是 | - | 请求报文 |
 | CRESPONSE | string | 是 | - | 响应报文 |
 | CSERVER_ID | string | 是 | - | 服务器标识 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -802,6 +835,7 @@
 | CIS_RUN | string | 是 | - | 是否运行，Y：是；N：否 |
 | CPULL_MACHINE_NAME | string | 是 | - | 放板机名称 |
 | CPULL_MACHINE_NO | string | 是 | - | 放板机编号（后面加"-放板机"为配置的DEVICE_NAME） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -816,6 +850,7 @@
 | CPART_NUM | string | 是 | - | 制造部件 |
 | CPROCESS | string | 是 | - | 工序，对应TBL_BD_PROCESS.CPROCESS_NO |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_BT_PARAM.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_EAP_BT_PARAM.CPROCESS = TBL_BD_PROCESS.CPROCESS_NO
@@ -835,6 +870,7 @@
 | CMEASURE_TYPE | string | 是 | - | 测量类型 |
 | CMIN_VALUE | decimal? | 是 | - | 最小值 |
 | CSTAND_VALUE | decimal? | 是 | - | 标准值 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_BT_PARAM_DTL.CMAIN_ID = TBL_EAP_BT_PARAM.CID
 
@@ -857,6 +893,7 @@
 | CVALUE | float? | 是 | - | 数值 |
 | CVALUE_STRING | string | 是 | - | 字符串值 |
 | CVALUE_TYPE | int | 否 | - | 值类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_CURRENT_DATA.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_CURRENT_DATA.CTAG_ID = TBL_EAP_TAG.CTAG_ID
@@ -877,6 +914,7 @@
 | CVALUE | float? | 是 | - | 测点数值 |
 | CVALUE_STRING | string | 是 | - | 测点数值(字符串) |
 | CVALUE_TYPE | byte? | 是 | - | 值类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_DATA_YYYYMM.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_DATA_YYYYMM.CTAG_ID = TBL_EAP_TAG.CTAG_ID
@@ -904,6 +942,7 @@
 | CSERVER_SERIAL | int | 否 | - | 服务器序号 |
 | CSTATUS | int | 否 | - | 设备状态码 |
 | CSTATUS_TIME | DateTime | 否 | - | 状态更新时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_DEVICE.CDEVICE_ID = TBL_EAP_ALARM.CDEVICE_ID
   - TBL_EAP_DEVICE.CDEVICE_ID = TBL_EAP_AOI_DETECTIONS.CDEVICE_ID
@@ -945,6 +984,7 @@
 | CSTATUS | int | 否 | - | 状态，1：可用；0：不可用 |
 | CUSE_COUNT | int? | 是 | - | 使用次数 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GE_PARAM.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_EAP_GE_PARAM.CID = TBL_EAP_GE_PARAM_CHANGE_LOG.CPARAMS_ID
@@ -970,6 +1010,7 @@
 | CBSN_DEN | decimal? | 是 | - | 变更前锡密度 |
 | CBSN_TIME | int? | 是 | - | 变更前锡时间 |
 | CPARAMS_ID | long | 否 | - | 参数主表ID，对应TBL_EAP_GE_PARAM.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GE_PARAM_CHANGE_LOG.CPARAMS_ID = TBL_EAP_GE_PARAM.CID
 
@@ -983,6 +1024,7 @@
 | CMACHINE_NAME | string | 是 | - | 机台名称 |
 | CPARAMS_ID | long | 否 | - | 参数主表ID，对应TBL_EAP_GE_PARAM.CID |
 | CWO | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GE_PARAM_USE_LOG.CPARAMS_ID = TBL_EAP_GE_PARAM.CID
   - TBL_EAP_GE_PARAM_USE_LOG.CWO = TBL_MO.CMO_LOT
@@ -1017,6 +1059,7 @@
 | CSAMPLE_NAME | string | 是 | - | 样品名称 |
 | CSAMPLE_NO | string | 是 | - | 样品编号 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD.CID = TBL_EAP_GOLD_NICKEL_TESTER_RECORD_DETAIL.CRECORD_ID
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD.COPERATOR = TBL_SYS_USER.CUSER_NAME
@@ -1032,6 +1075,7 @@
 | CNI_VALUE | decimal? | 是 | - | 镍测量值 |
 | CRECORD_ID | long | 否 | - | 主表ID，对应TBL_EAP_GOLD_NICKEL_TESTER_RECORD.CID |
 | CSEQ | int? | 是 | - | 序号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD_DETAIL.CRECORD_ID = TBL_EAP_GOLD_NICKEL_TESTER_RECORD.CID
 
@@ -1059,6 +1103,7 @@
 | CSN_MIN_VALUE | decimal? | 是 | - | 锡含量最小值 |
 | CSN_RANGE | decimal? | 是 | - | 锡含量范围 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN.CID = TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN_DETAIL.CRECORD_ID
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN.COPERATOR = TBL_SYS_USER.CUSER_NAME
@@ -1073,6 +1118,7 @@
 | CRECORD_ID | long | 否 | - | 主表ID，对应TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN.CID |
 | CSEQ | int? | 是 | - | 序号 |
 | CSN_VALUE | decimal? | 是 | - | 锡测量值 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN_DETAIL.CRECORD_ID = TBL_EAP_GOLD_NICKEL_TESTER_RECORD_SN.CID
 
@@ -1102,7 +1148,7 @@
 | Count | int? | 是 | - | 数量（int类型，允许为空） |
 | CRecipetime | string | 是 | - | 配方生成时间戳（varchar类型，长度50，允许为空） |
 | CROWREMARK | string | 是 | - | 行备注（varchar(max)类型，允许为空，可存储长文本） |
-| CSTATE | string | 是 | - | 状态（char类型，长度1，允许为空） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 | CThickness | decimal? | 是 | - | 板厚（decimal类型，精度18位，小数位6位，允许为空） |
 | CWidth | decimal? | 是 | - | 板宽（decimal类型，精度18位，小数位6位，允许为空） |
 - **关联关系**：无
@@ -1117,6 +1163,7 @@
 | CDEVICE_NAME | string | 是 | - | 设备名称 |
 | CLOGIN_USER | string | 是 | - | 登录用户，对应TBL_SYS_USER.CUSER_NAME |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_HEARTBEAT.CLOGIN_USER = TBL_SYS_USER.CUSER_NAME
 
@@ -1135,6 +1182,7 @@
 | CLOT_NO | string | 是 | - | 批次号 |
 | CLOT_OUT_QTY | int? | 是 | - | 产出数量 |
 | CLOT_QTY | int? | 是 | - | 批次数量 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_HONGSHENG_RECORDS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_HONGSHENG_RECORDS.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -1186,6 +1234,7 @@
 | Thickness | string | 是 | - | 板厚测量值 |
 | UpCuResult | string | 是 | - | 上铜判定结果 |
 | UpperLimit | string | 是 | - | 板厚上限 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_HONGSHENG_TM_RECORDS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
 
@@ -1246,6 +1295,7 @@
 | TEMP_SV | string | 是 | - | 温度设定值 |
 | Time_Stamp | DateTime | 否 | - | 时间戳 |
 | Time_Stamp_ms | int? | 是 | - | 时间戳毫秒 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -1271,6 +1321,7 @@
 | CSCALE_X | string | 是 | - | X方向缩放 |
 | CSCALE_Y | string | 是 | - | Y方向缩放 |
 | CSTART_TIME | string | 是 | - | 开始时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_LDI_LOG.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_EAP_LDI_LOG.CORDER_NO = TBL_MO.CMO_LOT
@@ -1302,6 +1353,7 @@
 | CTGZ_FILE_PATH | string | 是 | - | tgz文件地址 |
 | CTOP_ALIGNMENT_LAYER | string | 是 | - | TOP对位层 |
 | CTOP_LAYER | string | 是 | - | TOP层 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_LDI_PARAM.CITEM_NO = TBL_BD_ITEM.CITEM_NO
 
@@ -1324,6 +1376,7 @@
 | CMIN_VALUE | decimal? | 是 | - | 最小值 |
 | CSTAND_VALUE | decimal? | 是 | - | 标准值 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_LWT_DETECTIONS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_LWT_DETECTIONS.CLOT_NO = TBL_MO.CMO_LOT
@@ -1353,6 +1406,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CRESULT | string | 是 | - | 检测结果 |
 | CSTAND_VALUE | decimal? | 是 | - | 标准值 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_LWT_DETECTIONS_DTL.CMAIN_ID = TBL_EAP_LWT_DETECTIONS.CID
 
@@ -1368,6 +1422,7 @@
 | CDATETIME_MODIFIED | DateTime? | 是 | - | 修改时间 |
 | CMACHINE_NO | string | 是 | - | 设备编码 |
 | CUSER_NO | string? | 是 | - | 用户编号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_MASON_DETECTIONS.CID = TBL_EAP_MASON_DETECTIONS_DTL.CMAIN_ID
 
@@ -1396,6 +1451,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CTOTAL_POINT | int | 否 | - | 总测点数 |
 | CWEB_STRUCT | string | 是 | - | 网结构 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_MASON_DETECTIONS_DTL.CMAIN_ID = TBL_EAP_MASON_DETECTIONS.CID
   - TBL_EAP_MASON_DETECTIONS_DTL.CLOT_NO = TBL_MO.CMO_LOT
@@ -1419,6 +1475,7 @@
 | CRESULT_MIN | double | 否 | - | 结果最小值 |
 | CSHIFFT | string? | 是 | - | 班次 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PATTERN_PLAT.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_EAP_PATTERN_PLAT.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -1437,6 +1494,7 @@
 | CRESULT_DATA_3 | double? | 是 | - | 检测值3 |
 | CRESULT_DATA_4 | double? | 是 | - | 检测值4 |
 | CRESULT_DATA_5 | double? | 是 | - | 检测值5 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PATTERN_PLAT_ITEM.CPATTERN_PLAT_ID = TBL_EAP_PATTERN_PLAT.CID
 
@@ -1454,6 +1512,7 @@
 | CIS_END | char | 否 | - | 是否已结束 |
 | CSTART_TIME | DateTime | 否 | - | 时段开始时间 |
 | CSTATUS | int | 否 | - | 状态码 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PERIOD.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
 
@@ -1478,6 +1537,7 @@
 | CPOSITION_Y | decimal? | 是 | - | Y坐标 |
 | CREF_ID | string? | 是 | - | 关联编号 |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PMS_CONTENT.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_PMS_CONTENT.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -1497,6 +1557,7 @@
 | CPNL_CODE | string | 是 | - | PNL条码 |
 | CRESULT | string | 是 | - | 结果 |
 | CWON | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PMS_PROD.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_PMS_PROD.CWON = TBL_MO.CMO_LOT
@@ -1515,6 +1576,7 @@
 | CID | long | 否 | - | 主键ID |
 | CPROD_ID | long? | 是 | - | 主表ID，对应TBL_EAP_PMS_PROD.CID |
 | CREF_ID | int | 否 | - | 关联编号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PMS_PROD_DTL.CPROD_ID = TBL_EAP_PMS_PROD.CID
 
@@ -1530,6 +1592,7 @@
 | CMSG | string | 是 | - | 消息内容 |
 | CMSG_TYPE | string | 是 | - | 消息类型 |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_SHUTDOWN_RECORD.CLOGIN_USER = TBL_SYS_USER.CUSER_NAME
 
@@ -1559,6 +1622,7 @@
 | CTEXT | string | 是 | - | 文本内容 |
 | CUNIT_STATUS | string | 是 | - | 机台状态文本 |
 | CVERSION | string | 是 | - | 版本 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_STATUS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
 
@@ -1589,7 +1653,7 @@
 | CSERVER_NAME | string | 是 | - | 服务器名称 |
 | CSERVER_SERIAL | int | 否 | - | 服务器序号 |
 | CSHOW_TYPE | string | 是 | - | 显示类型 |
-| CSTATE | char | 否 | - | 数据状态 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 | CTAG_ALIAS | string | 是 | - | 参数别名 |
 | CTAG_DESC | string | 是 | - | 参数描述 |
 | CTAG_ID | int | 否 | - | 测点ID |
@@ -1637,6 +1701,7 @@
 | CUP_TOLERANCE | double | 否 | - | 上公差 |
 | CUSER_CREATED | string | 是 | - | 创建人 |
 | CUSER_MODIFIED | string | 是 | - | 修改人 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_THREE_D_DATA.CRECORD_ID = TBL_EAP_THREE_D_RECORD.CID
 
@@ -1660,6 +1725,7 @@
 | CSHIFFT | string? | 是 | - | 班次 |
 | CSTANDARD | double | 否 | - | 标准值 |
 | CUP_TOLERANCE | double | 否 | - | 上公差 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -1676,6 +1742,7 @@
 | CID | long | 否 | - | 主键ID |
 | CPROCESS_ID | long? | 是 | - | 工序ID，对应TBL_BD_PROCESS.CID |
 | CSHIFFT | string? | 是 | - | 班次 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_THREE_D_RECORD.CPROCESS_ID = TBL_BD_PROCESS.CID
   - TBL_EAP_THREE_D_RECORD.CID = TBL_EAP_THREE_D_DATA.CRECORD_ID
@@ -1691,6 +1758,7 @@
 | CFREQUENCY | string | 是 | - | 生效频率 |
 | CPARENT_DEVICE | string | 是 | - | 父设备标识 |
 | CSTART_TIME | TimeSpan? | 是 | - | 禁止运行开始时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -1710,6 +1778,7 @@
 | CITEM_NO | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | CORDER_NO | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
 | CTEST_TIME | DateTime? | 是 | - | 检测时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_YUHUI_TEST_RECORDS.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_YUHUI_TEST_RECORDS.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -1743,6 +1812,7 @@
 | CSTAND_VALUE | decimal? | 是 | - | 标准值 |
 | CUNIT | string | 是 | - | 单位 |
 | CUP_BOUND | decimal? | 是 | - | 上限 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_YUHUI_TEST_RECORDS_DTL.CMAIN_ID = TBL_EAP_YUHUI_TEST_RECORDS.CID
 
@@ -1761,6 +1831,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CTEMPLATE_ITEM_NAME | string | 是 | - | 模板项目名(可空) |
 | CTEMPLATE_NAME | string | 是 | - | 模板名(可空) |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -1779,6 +1850,7 @@
 | CPRODUCTION_END_TIME | string | 是 | - | 打靶完成时间 |
 | CPRODUCTION_START_TIME | string | 是 | - | 开始打靶时间 |
 | CUSER_CREATED | string | 是 | - | 人员，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_PATTERN_HAOSHUO_PRODUCTION_RECORD.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_PATTERN_HAOSHUO_PRODUCTION_RECORD.CLOT_NO = TBL_MO.CMO_LOT
@@ -1804,6 +1876,7 @@
 | CSTAN_Y | decimal? | 是 | - | Y标准值 |
 | DISTANCE_X | string | 是 | - | X坐标 |
 | DISTANCE_Y | string | 是 | - | Y坐标 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_PATTERN_HAOSHUO_PRODUCTION_RECORD_DTL.CDETECTION_ID = TBL_PATTERN_HAOSHUO_PRODUCTION_RECORD.CID
 
@@ -1845,6 +1918,7 @@
 | CTASK_TYPE | int | 否 | - | 任务类型 |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_ASSAY_LOG.CWC_ID = TBL_BD_WC.CID
   - TBL_QM_ASSAY_LOG.CMEDICINE_TANK_ID = TBL_QM_MEDICINE_TANK.CID
@@ -1905,6 +1979,7 @@
 | CTEMPLATE_ITEM_TAG | string | 是 | - | 项目标签 |
 | CTITRATION_VALUE | string | 是 | - | 滴定值 |
 | CUNIT | string | 是 | - | 单位 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_ASSAY_LOG_ITEM.CASSAY_LOG_ID = TBL_QM_ASSAY_LOG.CID
   - TBL_QM_ASSAY_LOG_ITEM.CRETEST_USER = TBL_SYS_USER.CUSER_NAME
@@ -1961,6 +2036,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSHIPMENT_QTY | decimal? | 是 | - | 出货数量 |
 | CSTATUS | int? | 是 | - | 状态：1待开始、2进行中、3已完成、4已退回 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_CC_EXCEPTION.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_QM_CC_EXCEPTION.CDUTY_PROCESS_ID = TBL_BD_PROCESS.CID
@@ -1997,6 +2073,7 @@
 | CRESPONSIBLE_PERSON | string | 是 | - | 责任人，对应TBL_SYS_USER.CUSER_NAME |
 | CRESPONSIBLE_UNIT | string | 是 | - | 责任单位 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_COMPLAINT.CRESPONSIBLE_PERSON = TBL_SYS_USER.CUSER_NAME
   - TBL_QM_COMPLAINT.CID = TBL_QM_COMPLAINT_IMAGE.CCOMPLAINT_ID
@@ -2013,6 +2090,7 @@
 | CCOMPLAINT_ID | long | 否 | - | 投诉记录ID  对应 TBL_QM_COMPLAINT.CID |
 | CFILE_NAME | string | 是 | - | 文件名称 |
 | CFILE_PATH | string | 是 | - | Minio文件存储路径 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_COMPLAINT_IMAGE.CCOMPLAINT_ID = TBL_QM_COMPLAINT.CID
 
@@ -2052,6 +2130,7 @@
 | CUNIT | string | 是 | - | 单位 |
 | CUSTOMER_CODE | string | 是 | - | 客户编码，对应TBL_BD_CUSTOMER.CUSTOMER_NO |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_INSPECT_RECORD.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_QM_INSPECT_RECORD.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -2097,6 +2176,7 @@
 | orientation | string | 是 | - | 图片方向 |
 | UPPER_TOLERANCE | decimal? | 是 | - | 上公差 |
 | url | string | 是 | - | 图片地址 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_INSPECTION_RECORD_ITEM.CINSPECTION_RECORD_ID = TBL_QM_INSPECT_RECORD.CID
   - TBL_QM_INSPECTION_RECORD_ITEM.CTEMPLATE_ITEM_ID = TBL_NP_TEMPLATE_ITEM.CID
@@ -2113,6 +2193,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_MEDICINE_TANK.CWC_ID = TBL_BD_WC.CID
   - TBL_QM_MEDICINE_TANK.CID = TBL_QM_ASSAY_LOG.CMEDICINE_TANK_ID
@@ -2156,6 +2237,7 @@
 | CUSTOMER_CODE | string | 是 | - | 客户编码，对应TBL_BD_CUSTOMER.CUSTOMER_NO |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_PL_LOG.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_QM_PL_LOG.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -2200,6 +2282,7 @@
 | CTEMPLATE_ITEM_TAG | string | 是 | - | 模板项目标签 |
 | CTEXTBOX_QTY | int | 否 | - | 文本框数量 |
 | CUNIT | string | 是 | - | 单位 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_QM_PL_LOG_ITEM.CPL_LOG_ID = TBL_QM_PL_LOG.CID
   - TBL_QM_PL_LOG_ITEM.CTEMPLATE_ITEM_ID = TBL_NP_TEMPLATE_ITEM.CID
@@ -2233,6 +2316,7 @@
 | CREVIEW_USER | string | 是 | - | 审核人，对应TBL_SYS_USER.CUSER_NAME |
 | CSHADOW_COPY | string | 是 | - | 影送 |
 | CSUBJECT | string | 是 | - | 主题 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_CONTACT_FORM.CAPPROVAL_USER = TBL_SYS_USER.CUSER_NAME
   - TBL_ESOP_CONTACT_FORM.CISSUE_USER = TBL_SYS_USER.CUSER_NAME
@@ -2251,6 +2335,7 @@
 | CREMARK | string | 是 | - | 会签备注 |
 | CTYPE | int? | 是 | - | 类型（1:4M文件、2:联络单） |
 | CUSER_NAME | string | 是 | - | 会签人，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_COUNTERSIGN.CMAIN_ID = TBL_ESOP_TEMPORARY_CHANGE_ORDER.CID
   - TBL_ESOP_COUNTERSIGN.CUSER_NAME = TBL_SYS_USER.CUSER_NAME
@@ -2288,6 +2373,7 @@
 | CTEST_DATE | DateTime? | 是 | - | 测试日期 |
 | CTYPE | string | 是 | - | 相关联的物料类型 |
 | CURL | string | 是 | - | 文件访问地址 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_FILE.CFILE_CATEGORY = TBL_ESOP_FILE_CATEGORY.CID
   - TBL_ESOP_FILE.CFILE_TYPE = TBL_ESOP_FILE_TYPE.CID
@@ -2307,6 +2393,7 @@
 | CPARENT_ID | long | 否 | - | 上级目录ID，对应TBL_ESOP_FILE_CATEGORY.CID |
 | CSEQ | int | 否 | - | 排序号 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_FILE_CATEGORY.CPARENT_ID = TBL_ESOP_FILE_CATEGORY.CID
   - TBL_ESOP_FILE_CATEGORY.CID = TBL_ESOP_FILE.CFILE_CATEGORY
@@ -2322,6 +2409,7 @@
 | CFILE_TYPE | string | 是 | - | 签名文件类型 |
 | CUSER_NAME | string | 是 | - | 用户姓名 |
 | CUSER_NO | string | 是 | - | 用户工号，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_FILE_SIGN.CUSER_NO = TBL_SYS_USER.CUSER_NAME
 
@@ -2337,6 +2425,7 @@
 | CTYPE_NAME | string | 是 | - | 类型名称 |
 | CTYPE_NO | string | 是 | - | 类型编号 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_FILE_TYPE.CID = TBL_ESOP_FILE.CFILE_TYPE
 
@@ -2383,6 +2472,7 @@
 | CREVIEW_TODO | bool | 否 | - | 是否生成代码事项 |
 | CREVIEW_USER | string | 是 | - | 审核人，对应TBL_SYS_USER.CUSER_NAME |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_ESOP_TEMPORARY_CHANGE_ORDER.CINVOLVED_ITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_ESOP_TEMPORARY_CHANGE_ORDER.CAPPLICANT_NAME = TBL_SYS_USER.CUSER_NAME
@@ -2403,6 +2493,7 @@
 | CBEFOR_ITEM | string | 是 | - | 变更前板材料号，对应TBL_BD_ITEM.CITEM_NO |
 | CFOURM_ID | long | 否 | - | 表单ID，对应TBL_ESOP_TEMPORARY_CHANGE_ORDER.CID |
 | CPART | string | 是 | - | 部件 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FOURM_CHANGE_ITEM_LOG.CFOURM_ID = TBL_ESOP_TEMPORARY_CHANGE_ORDER.CID
   - TBL_FOURM_CHANGE_ITEM_LOG.CAFTER_ITEM = TBL_BD_ITEM.CITEM_NO
@@ -2422,6 +2513,7 @@
 | CTEMP_ID | long? | 是 | - | 模板ID，对应TBL_NP_TEMPLATE.CID |
 | CWC_ID | long? | 是 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_PM_TEMP_WC_LINK.CTEMP_ID = TBL_NP_TEMPLATE.CID
   - TBL_EAM_PM_TEMP_WC_LINK.CWC_ID = TBL_BD_WC.CID
@@ -2438,6 +2530,7 @@
 | CTEMPLATE_NAME | string | 是 | - | 模板名称 |
 | CTEMPLATE_TYPE_ID | long? | 是 | - | 模板类型标识， TBL_NP_TEMPLATE_TYPE.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_NP_TEMPLATE.CID = TBL_EAM_PM_TEMP_WC_LINK.CTEMP_ID
   - TBL_NP_TEMPLATE.CID = TBL_NP_TEMPLATE_ITEM.CTEMPLATE_ID
@@ -2468,6 +2561,7 @@
 | CTEMPLATE_TYPE_ID | long | 否 | - | 模板类型标识， TBL_NP_TEMPLATE_TYPE.CID |
 | CTEMPLATE_VERSION | double | 否 | - | 模板版本 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_NP_TEMPLATE_CHANGE.CTEMPLATE_TYPE_ID = TBL_NP_TEMPLATE_TYPE.CID
   - TBL_NP_TEMPLATE_CHANGE.CAUDIT_USER_ID = TBL_SYS_USER.CUSER_NAME
@@ -2548,6 +2642,7 @@
 | CTOOL_ID_EDIT | long | 否 | - | 工具标识（变更后） |
 | CUNIT | string | 是 | - | 单位（原值） |
 | CUNIT_EDIT | string | 是 | - | 单位（变更后） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_NP_TEMPLATE_CHANGE_ITEM.CTEMPLATE_CHANGE_ID = TBL_NP_TEMPLATE_CHANGE.CID
 
@@ -2594,6 +2689,7 @@
 | LOWER_TOLERANCE | decimal? | 是 | - | 下公差 |
 | UPPER_TOLERANCE | decimal? | 是 | - | 上公差 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_NP_TEMPLATE_ITEM.CTEMPLATE_ID = TBL_NP_TEMPLATE.CID
   - TBL_NP_TEMPLATE_ITEM.CID = TBL_QM_INSPECTION_RECORD_ITEM.CTEMPLATE_ITEM_ID
@@ -2613,6 +2709,7 @@
 | CERROR_LEVEL | string | 是 | - | 故障等级 |
 | CERROR_NAME | string | 是 | - | 故障名称 |
 | CERROR_TYPE | string | 是 | - | 故障类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_ERROR_CODE.CID = TBL_EAM_REPAIR.CERROR_ID
 
@@ -2629,6 +2726,7 @@
 | CFREQ_NAME | string | 是 | - | 频次名称 |
 | CFREQ_UNIT | string | 是 | - | 频次单位 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -2661,6 +2759,7 @@
 | CTEMP_NO | String | 是 | - | 模板编号 |
 | CWC_ID | Int64 | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_MAINTAIN_TASK.CTEMP_ID = TBL_NP_TEMPLATE.CID
   - TBL_EAM_MAINTAIN_TASK.CWC_ID = TBL_BD_WC.CID
@@ -2679,6 +2778,7 @@
 | COLD_TIME | string | 是 | - | 原计划时间 |
 | CREMARK | string | 是 | - | 备注 |
 | CTASK_ID | long | 否 | - | 任务ID，TBL_EAM_MAINTAIN_TASK.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_MAINTAIN_TASK_CHANGE_LOG.CTASK_ID = TBL_EAM_MAINTAIN_TASK.CID
 
@@ -2723,6 +2823,7 @@
 | CWARM_MAX | Decimal | 否 | - | 预警上限 |
 | CWARM_MIN | Decimal | 否 | - | 预警下限 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_MAINTAIN_TASK_ITEM.CHID = TBL_EAM_MAINTAIN_TASK.CID
   - TBL_EAM_MAINTAIN_TASK_ITEM.CTEMP_ID = TBL_NP_TEMPLATE.CID
@@ -2738,6 +2839,7 @@
 |--------|----------|----------|--------|------|
 | CIMAGE_PATH | string | 是 | - | 图片路径 |
 | CITEM_ID | Int64 | 否 | - | 保养任务明细ID，对应TBL_EAM_MAINTAIN_TASK_ITEM.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_MAINTAIN_TASK_ITEM_IMG.CITEM_ID = TBL_EAM_MAINTAIN_TASK_ITEM.CID
 
@@ -2778,6 +2880,7 @@
 | CWC_CHILDREN | long? | 是 | - | 设备故障子节点(设备ID) |
 | CWC_ID | Int64 | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_REPAIR.CERROR_ID = TBL_EAM_ERROR_CODE.CID
   - TBL_EAM_REPAIR.CWC_ID = TBL_BD_WC.CID
@@ -2801,6 +2904,7 @@
 | CIMAGE_PATH | string | 是 | - | 图片路径 |
 | CREPAIR_ID | Int64 | 否 | - | 维修单ID，对应TBL_EAM_REPAIR.CID |
 | CTYPE | int | 否 | - | 图片类型（1故障图片，2维修图片） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_REPAIR_IMG.CREPAIR_ID = TBL_EAM_REPAIR.CID
 
@@ -2815,6 +2919,7 @@
 | CREPAIR_ID | long | 否 | - | 维修单ID，对应TBL_EAM_REPAIR.CID |
 | CREPAIR_MAN_CODE_PRE | string | 是 | - | 指派人账号，对应TBL_SYS_USER.CUSER_NAME |
 | CREPAIR_MAN_NAME_PRE | string | 是 | - | 指派人名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_REPAIR_MAN.CREPAIR_ID = TBL_EAM_REPAIR.CID
   - TBL_EAM_REPAIR_MAN.CREPAIR_MAN_CODE_PRE = TBL_SYS_USER.CUSER_NAME
@@ -2830,6 +2935,7 @@
 | CMATERIAL_SPEC | string | 是 | - | 物料规格 |
 | CQTY | int | 否 | - | 数量 |
 | CREPAIR_ID | Int64 | 否 | - | 维修单ID，对应TBL_EAM_REPAIR.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAM_REPAIR_MATERIAL.CREPAIR_ID = TBL_EAM_REPAIR.CID
 
@@ -2846,6 +2952,7 @@
 |--------|----------|----------|--------|------|
 | CDEVICE_NO | string | 是 | - | 设备编码， 值为RR01、RR02、RR03 |
 | CUSER_NAME | string | 是 | - | 用户账号，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_DBFC_USER.CUSER_NAME = TBL_SYS_USER.CUSER_NAME
 
@@ -2888,6 +2995,7 @@
 | ScrapUser | string | 是 | - | 报废人，对应TBL_SYS_UER.CUSER_NAME |
 | XOUT | string | 是 | - | 叉板数 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_SFC_PACKAGE.CMO_LOT = TBL_MO.CMO_LOT
@@ -2907,6 +3015,7 @@
 | CITEM_ID | long? | 是 | - | 产品或物料ID  对应 TBL_BD_ITEM.CID |
 | CREMARK | string | 是 | - | 备注 |
 | CTEMPLATE_ID | long | 否 | - | 模板ID，对应TBL_BD_TEMPLATE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE_LABEL_LINK.CCUSTOMER_ID = TBL_BD_CUSTOMER.CID
   - TBL_SFC_PACKAGE_LABEL_LINK.CITEM_ID = TBL_BD_ITEM.CID
@@ -2922,6 +3031,7 @@
 | CBARCODE | string | 是 | - | 包装条码，对应TBL_SFC_PACKAGE.CBARCODE |
 | COPERATE_TYPE | int? | 是 | - | 操作类型代码 |
 | CREMARK | string | 是 | - | 备注，描述具体的操作类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE_LOG.CBARCODE = TBL_SFC_PACKAGE.CBARCODE
 
@@ -2952,6 +3062,7 @@
 | CTOTAL_WEIGHT | decimal? | 是 | - | 总重量 |
 | CWIDTH | decimal? | 是 | - | 宽度 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE_RULE.CID = TBL_SFC_PACKAGE_RULE_EXT.CPACKAGE_RULE_ID
   - TBL_SFC_PACKAGE_RULE.CID = TBL_SFC_PACKAGE_RULE_LINK.CPACKAGE_RULE_ID
@@ -2989,6 +3100,7 @@
 | CEXTEND_9 | string | 是 | - | 有无HF |
 | CIMAGE_DATA | string | 是 | - | 图片 |
 | CPACKAGE_RULE_ID | long | 否 | - | 主表ID，对应TBL_SFC_PACKAGE_RULE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE_RULE_EXT.CPACKAGE_RULE_ID = TBL_SFC_PACKAGE_RULE.CID
 
@@ -3003,6 +3115,7 @@
 | CITEM_ID | long? | 是 | - | 外键，产品或物料ID  对应 TBL_BD_ITEM.CID |
 | CPACKAGE_RULE_ID | long? | 是 | - | 包装规则ID，对应TBL_SFC_PACKAGE_RULE.CID |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_PACKAGE_RULE_LINK.CCUSTOMER_ID = TBL_BD_CUSTOMER.CID
   - TBL_SFC_PACKAGE_RULE_LINK.CITEM_ID = TBL_BD_ITEM.CID
@@ -3066,7 +3179,7 @@
 | CROWREMARK | string | 是 | - | 行备注 |
 | CSEQ | int? | 是 | - | 排序号 |
 | CSTANDARD_VALUE | string | 是 | - | 标准值 |
-| CSTATE | string | 是 | - | 状态标识 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 | CUSER_CREATED | string | 是 | - | 创建用户 |
 | CUSER_MODIFIED | string | 是 | - | 修改用户 |
 | CVALUE_TYPE | int? | 是 | - | 值类型 |
@@ -3094,7 +3207,7 @@
 | CPROCESS_ID | long? | 是 | - | 工序ID，对应TBL_BD_PROCESS.CID |
 | CREMARK | string | 是 | - | 备注 |
 | CROWREMARK | string | 是 | - | 行备注 |
-| CSTATE | string | 是 | - | 状态标识 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 | CSTATUS | int? | 是 | - | 审核状态 |
 | CSU_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CSU_R_ID | long | 否 | - | 设备配方ID，对应TBL_SFC_RECIPE_SMART_UNIT.CID |
@@ -3138,7 +3251,7 @@
 | CROWREMARK | string | 是 | - | 行备注 |
 | CSEQ | int? | 是 | - | 排序号 |
 | CSTANDARD_VALUE | string | 是 | - | 标准值 |
-| CSTATE | string | 是 | - | 状态标识 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 | CUSER_CREATED | string | 是 | - | 创建用户 |
 | CUSER_MODIFIED | string | 是 | - | 修改用户 |
 | CVALUE_TYPE | int? | 是 | - | 值类型 |
@@ -3181,6 +3294,7 @@
 | CWORK_NUMBER | decimal | 否 | - | 工作数量 |
 | CWORK_TYPE | int | 否 | - | 1:正常生产记录(检验生产记录);2:批量生产记录;3:无工单生产记录;4:历史记录新增;5:FQC生产记录 |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_WS_LOG.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_SFC_WS_LOG.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -3219,6 +3333,7 @@
 | CTEMPLATE_ITEM_TAG | string | 是 | - | 模板项标签 |
 | CUNIT | string | 是 | - | 单位 |
 | CWS_LOG_ID | long | 否 | - | 生产记录主表ID，对应TBL_SFC_WS_LOG.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_WS_LOG_ITEM.CWS_LOG_ID = TBL_SFC_WS_LOG.CID
 
@@ -3248,6 +3363,7 @@
 | CTEMPLATE_ID | long | 否 | - | 模板ID，对应TBL_NP_TEMPLATE.CID |
 | CUNIT | string | 是 | - | 默认单位 |
 | CWARNING_TIME | int? | 是 | - | 预警时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_WS_TEMPLATE_CONFIG.CTEMPLATE_ID = TBL_NP_TEMPLATE.CID
 
@@ -3262,6 +3378,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CTEMPLATE_ID | long | 否 | - | 模板ID，对应TBL_NP_TEMPLATE.CID |
 | CWC_ID | long | 否 | - | 工作中心ID，对应TBL_BD_WC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SFC_WS_TEMPLATE_LINK.CPROCESS_ID = TBL_BD_PROCESS.CID
   - TBL_SFC_WS_TEMPLATE_LINK.CTEMPLATE_ID = TBL_NP_TEMPLATE.CID
@@ -3296,6 +3413,7 @@
 | CUST_CODE | string | 是 | - | 客户代码 |
 | CWC_ID | long? | 是 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MO.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_MO.CWC_ID = TBL_BD_WC.CID
@@ -3326,6 +3444,7 @@
 | COS_NO | string | 是 | - | 外协订单号，对应VW_ERP_OUTSOURCED_PO.外协订单号 |
 | CQTY | int | 否 | - | 数量 |
 | CSO_NO | string | 是 | - | 销售订单号，对应VW_ERP_OUTSOURCED_PO.销售订单号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MO_OUTS.CMO_LOT = TBL_MO.CMO_LOT
   - TBL_MO_OUTS.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -3343,6 +3462,7 @@
 | SHIFT_CODE | string | 是 | - | 班次编码，值为白班和晚班 |
 | UPDATED_TIME | string | 是 | - | 更新时间 |
 | USER_ID | long | 否 | - | 员工用户ID，对应TBL_SYS_USER.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OUTSOURCE_SHIFT_EMPLOYEE.CWC_ID = TBL_BD_WC.CID
   - TBL_OUTSOURCE_SHIFT_EMPLOYEE.USER_ID = TBL_SYS_USER.CID
@@ -3361,6 +3481,7 @@
 | 生产编号 | string | 是 | - | 生产编号 |
 | 数量 | int | 否 | - | 数量 |
 | 订单状态 | string | 是 | - | 订单状态，Outsoucing：外协中；Shipped：已发货；Cancel：已取消；Close：已关闭；Valid：生效中 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3385,6 +3506,7 @@
 | 水印 | string | 是 | - | 0：无水印；1：有水印 |
 | 长 | decimal | 否 | - | 长 |
 | 宽 | decimal | 否 | - | 宽 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3420,6 +3542,7 @@
 | PwId | string | 是 | - | 工序序号 |
 | processNumber | string | 是 | - | 工单工艺路线 ID |
 | moRouteId | string | 是 | - | 计划 PCS 数 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3433,6 +3556,7 @@
 | CPROCESS_NO | string | 是 | - | 工序编号，对应TBL_BD_PROCESS.CPROCESS_NO |
 | CPROCESS_NAME | string | 是 | - | 工序名称 |
 | CDATE_CODE | string | 是 | - | 日期码 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VW_ERP_MO_DATE_CODE.CORDER_NO = TBL_MO.CMO_LOT
   - VW_ERP_MO_DATE_CODE.CPROCESS_NO = TBL_BD_PROCESS.CPROCESS_NO
@@ -3449,6 +3573,7 @@
 | ParamID | string | 是 | - | 参数编号 |
 | ParamName | string | 是 | - | 参数名称 |
 | ParamValue | string | 是 | - | 参数值（板厚） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VW_MI_PROCESS_GENERAL.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - VW_MI_PROCESS_GENERAL.CPROCESS_NO = TBL_BD_PROCESS.CPROCESS_NO
@@ -3465,6 +3590,7 @@
 | CPROCESS_NO | string | 是 | - | 工序编号，对应TBL_BD_PROCESS.CPROCESS_NO |
 | CPROCESS_NAME | string | 是 | - | 工序名称 |
 | CSEQ | string | 是 | - | 工序顺序 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VW_MO_ROUTE.CORDER_NO = TBL_MO.CMO_LOT
   - VW_MO_ROUTE.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -3483,6 +3609,7 @@
 | Wip | int | 否 | - | 在制 PCS 数 |
 | PANELS | int | 否 | - | 在制 PNL 数 |
 | SETS_QTY | int | 否 | - | SET数 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3528,6 +3655,7 @@
 | CUNIT | string | 是 | - | 单位 |
 | CUSE_QTY | decimal? | 是 | - | 使用数量 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_ITEM_BARCODE.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_WMS_ITEM_BARCODE.CSUPPLIER_ID = TBL_BD_SUPPLIER.CID
@@ -3555,6 +3683,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSOURCE_ID | string | 是 | - | 来源ID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_ITEM_PACKING_BARCODE.CPARENT_ID = TBL_WMS_ITEM_PACKING_BARCODE.CID
   - TBL_WMS_ITEM_PACKING_BARCODE.CID = TBL_WMS_ITEM_BARCODE.CPACKING_ID
@@ -3581,6 +3710,7 @@
 | CSTATUS | int | 否 | - | 1已入仓、2已出仓 |
 | CTG_VALUE | string | 是 | - | TG值 |
 | CWAREHOUSE_ID | long | 否 | - | 中转仓ID，对应TBL_WMS_WAREHOUSE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_LINE_RECORD.CLOCATION_SN = TBL_WMS_LOCATION.CLOCATION_SN
   - TBL_WMS_LINE_RECORD.CWAREHOUSE_ID = TBL_WMS_WAREHOUSE.CID
@@ -3599,6 +3729,7 @@
 | CLOCATION_SN | string | 是 | - | 货位编码/货位条码 |
 | CWAREHOUSE_ID | long | 否 | - | 仓库ID，对应TBL_WMS_WAREHOUSE.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_LOCATION.CWAREHOUSE_ID = TBL_WMS_WAREHOUSE.CID
   - TBL_WMS_LOCATION.CID = TBL_WMS_ITEM_BARCODE.CLOCATION_ID
@@ -3626,6 +3757,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSTATUS | int | 否 | - | 1已入仓、2已出仓 |
 | CWAREHOUSE_ID | long | 否 | - | 尾数仓ID，对应TBL_WMS_WAREHOUSE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_MANTISSA_RECORD.CLOCATION_SN = TBL_WMS_LOCATION.CLOCATION_SN
   - TBL_WMS_MANTISSA_RECORD.CWAREHOUSE_ID = TBL_WMS_WAREHOUSE.CID
@@ -3644,6 +3776,7 @@
 | CPICKING_QTY | decimal? | 是 | - | 领料数量 |
 | CREMARK | string | 是 | - | 备注 |
 | CUSER_NAME | string | 是 | - | 领料人，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_PICKING_LOG.CUSER_NAME = TBL_SYS_USER.CUSER_NAME
   - TBL_WMS_PICKING_LOG.CID = TBL_WMS_PICKING_LOG_DTL.CPICKING_ID
@@ -3659,6 +3792,7 @@
 | CPICKING_ID | long? | 是 | - | 领料主表ID |
 | CQTY | decimal? | 是 | - | 领料数量 |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_PICKING_LOG_DTL.CBARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
   - TBL_WMS_PICKING_LOG_DTL.CPICKING_ID = TBL_WMS_PICKING_LOG.CID
@@ -3685,6 +3819,7 @@
 | CWAREHOUSE_CODE | string | 是 | - | 仓库编码 |
 | CWAREHOUSE_NAME | string | 是 | - | 仓库名称 |
 | CWAREHOUSE_TYPE_ID | long | 否 | - | 仓库分类ID，对应TBL_WMS_WAREHOUSE_TYPE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_WAREHOUSE.CWAREHOUSE_TYPE_ID = TBL_WMS_WAREHOUSE_TYPE.CID
   - TBL_WMS_WAREHOUSE.CID = TBL_WMS_LOCATION.CWAREHOUSE_ID
@@ -3711,6 +3846,7 @@
 | CWAREHOUSE_TYPE_CODE | string | 是 | - | 类别代码 |
 | CWAREHOUSE_TYPE_NAME | string | 是 | - | 类别名称 |
 | CWAREHOUSE_TYPE_PROPERTY | string | 是 | - | 仓库属性 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_WAREHOUSE_TYPE.CID = TBL_WMS_WAREHOUSE.CWAREHOUSE_TYPE_ID
 
@@ -3728,6 +3864,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSOURCE_ID | string | 是 | - | 来源ID |
 | CWAREHOUSE_ID | long? | 是 | - | 仓库ID，对应TBL_WMS_WAREHOUSE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_AREA.CWAREHOUSE_ID = TBL_WMS_WAREHOUSE.CID
   - TBL_WMS_AREA.CPERSON_ID = TBL_SYS_USER.CID
@@ -3745,6 +3882,7 @@
 | CSPLIT_TIME | DateTime? | 是 | - | 拆分时间 |
 | CSPLIT_USER | string | 是 | - | 拆分人，对应TBL_SYS_USER.CUSER_NAME |
 | CTARGET_BARCODE_ID | long? | 是 | - | 目标条码ID，对应TBL_WMS_ITEM_BARCODE.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_BARCODE_SPLIT_RECORD.CSOURCE_BARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
   - TBL_WMS_BARCODE_SPLIT_RECORD.CTARGET_BARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
@@ -3763,6 +3901,7 @@
 | order | string | 是 | - | 单据号 |
 | printer | string | 是 | - | 打印机名称 |
 | qty | int | 否 | - | 打印数量 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3775,6 +3914,7 @@
 | CBARCODE_ID | long | 否 | - | 打印条码记录ID，对应TBL_WMS_ITEM_BARCODE.CID |
 | CREMARK | string | 是 | - | 备注 |
 | CSTOCK_ID | long | 否 | - | ERP库存记录ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_STOCK_BARCODE_LINK.CBARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
 
@@ -3820,6 +3960,7 @@
 | StockType | string | 是 | - | 入库类型 |
 | WarehouseCode | string | 是 | - | 仓库代码 |
 | WarehouseName | string | 是 | - | 仓库名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3873,6 +4014,7 @@
 | SupplierCode | string | 是 | - | 供应商代码 |
 | SupplierName | string | 是 | - | 供应商名称 |
 | WarehouseName | string | 是 | - | 仓库名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3965,6 +4107,7 @@
 | Status | int? | 是 | - | 状态 |
 | TaxRate | decimal? | 是 | - | 税率 |
 | Type | string | 是 | - | 类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -3994,6 +4137,7 @@
 | CSUPPLIER_NAME | string | 是 | - | 供应商名称 |
 | CTEST_DATE | DateTime? | 是 | - | 检验日期 |
 | CTYPE | string | 是 | - | 类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ERP_IQC_RETURN.CMATERIAL_CODE = TBL_BD_ITEM.CITEM_NO
 
@@ -4021,6 +4165,7 @@
 | 物料代码 | string | 是 | - | 物料代码，对应TBL_BD_ITEM.CITEM_NO |
 | 物料分组 | string | 是 | - | 物料分组 |
 | 物料名称 | string | 是 | - | 物料名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -4056,6 +4201,7 @@
 | CTYPE | string | 是 | - | 类型 |
 | CUSER_CREATED | string | 是 | - | 创建人 |
 | CWAREHOUSE | string | 是 | - | 仓库 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ERP_MATERIAL_RETURN_ITEM.CMATERIAL_CODE = TBL_BD_ITEM.CITEM_NO
   - VM_ERP_MATERIAL_RETURN_ITEM.CPROCESS = TBL_BD_PROCESS.CPROCESS_NAME
@@ -4092,6 +4238,7 @@
 | CTYPE | string | 是 | - | 退料类型 |
 | CUSER_CREATED | string | 是 | - | 创建人 |
 | CWAREHOUSE | string | 是 | - | 仓库 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ERP_MATERIAL_RETURN_REQUEST_ITEM.CMATERIAL_CODE = TBL_BD_ITEM.CITEM_NO
   - VM_ERP_MATERIAL_RETURN_REQUEST_ITEM.CPROCESS = TBL_BD_PROCESS.CPROCESS_NAME
@@ -4143,6 +4290,7 @@
 | SONumber | string | 是 | - | 销售订单号 |
 | ToReceive | decimal? | 是 | - | 待接收数量 |
 | Type | string | 是 | - | 类型 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -4163,6 +4311,7 @@
 | CSUPP_BATCH_NO | string | 是 | - | 供应商批号 |
 | CSUPPLIER_NAME | string | 是 | - | 供应商名称 |
 | CWAREHOUSE_NAME | string | 是 | - | 仓库名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ERP_STOCK_INFO.CMATERIAL_CODE = TBL_BD_ITEM.CITEM_NO
 
@@ -4189,6 +4338,7 @@
 | CSTATUS | string | 是 | - | 状态 |
 | CSUPPLIER_ID | Int64? | 是 | - | 供应商ID，对应TBL_BD_SUPPLIER.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_PO.CSUPPLIER_ID = TBL_BD_SUPPLIER.CID
   - TBL_SRM_PO.CID = TBL_SRM_PO_DETAIL.CPO_ID
@@ -4219,6 +4369,7 @@
 | CSUPPLIER_CONFIRM_REMARK | string | 是 | - | 供应商备注 |
 | CUNIT | string | 是 | - | 单位 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_PO_DELIVERY.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_SRM_PO_DELIVERY.CPO_DETAIL_ID = TBL_SRM_PO_DETAIL.CID
@@ -4252,6 +4403,7 @@
 | CSOURCE_ID | string | 是 | - | 来源ID |
 | CUNIT | string | 是 | - | 单位 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_PO_DETAIL.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_SRM_PO_DETAIL.CPO_ID = TBL_SRM_PO.CID
@@ -4279,6 +4431,7 @@
 | CSTATUS | string | 是 | - | 状态；BARCODE_STORAGE：已收货；BARCODE_DELIVERY：运输中；BARCODE_STOCK：已入库 |
 | CSUPPLIER_ID | Int64? | 是 | - | 供应商ID，对应TBL_BD_SUPPLIER.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_RECEIVING.CSUPPLIER_ID = TBL_BD_SUPPLIER.CID
   - TBL_SRM_RECEIVING.CRECEIVING_USER = TBL_SYS_USER.CUSER_NAME
@@ -4293,6 +4446,7 @@
 |--------|----------|----------|--------|------|
 | CBARCODE | string | 是 | - | 条码，对应TBL_WMS_ITEM_BARCODE.CBARCODE |
 | CRECEIVING_DTL_ID | Int64? | 是 | - | 收货单明细ID，对应TBL_SRM_RECEIVING_DTL.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_RECEIVING_BARCODE.CBARCODE = TBL_WMS_ITEM_BARCODE.CBARCODE
   - TBL_SRM_RECEIVING_BARCODE.CRECEIVING_DTL_ID = TBL_SRM_RECEIVING_DTL.CID
@@ -4336,6 +4490,7 @@
 | CUNIT | string | 是 | - | 单位 |
 | CWAREHOUSE_ID | Int64? | 是 | - | 仓库ID，对应TBL_WMS_WAREHOUSE.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SRM_RECEIVING_DTL.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_SRM_RECEIVING_DTL.CLOCATION_ID = TBL_WMS_LOCATION.CID
@@ -4362,6 +4517,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSUPPLIER_ID | long | 否 | - | 供应商ID，对应TBL_BD_SUPPLIER.CID |
 | CSUPPLIER_NAME | string | 是 | - | 供应商名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SHEET_LINK_PP.CSUPPLIER_ID = TBL_BD_SUPPLIER.CID
   - TBL_SHEET_LINK_PP.CLINK_SUPPLIER_ID = TBL_BD_SUPPLIER.CID
@@ -4377,6 +4533,7 @@
 | CPICKING_QTY | decimal? | 是 | - | 领料数量 |
 | CREMARK | string | 是 | - | 备注 |
 | CUSER_NAME | string | 是 | - | 领料人，对应TBL_SYS_USER.CUSER_NAME |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_PICKING_LOG.CUSER_NAME = TBL_SYS_USER.CUSER_NAME
   - TBL_WMS_PICKING_LOG.CID = TBL_WMS_PICKING_LOG_DTL.CPICKING_ID
@@ -4392,6 +4549,7 @@
 | CPICKING_ID | long? | 是 | - | 领料主表ID |
 | CQTY | decimal? | 是 | - | 领料数量 |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_WMS_PICKING_LOG_DTL.CBARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
   - TBL_WMS_PICKING_LOG_DTL.CPICKING_ID = TBL_WMS_PICKING_LOG.CID
@@ -4408,6 +4566,7 @@
 | CPROCESS_ID | long? | 是 | - | 工序ID，对应TBL_BD_PROCESS.CID |
 | CREMARK | string | 是 | - | 备注 |
 | CSUPPLIER_BARCODE | string? | 是 | - | 供应商条码 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MO_BARCODE_PROD_LINK.CBARCODE_ID = TBL_WMS_ITEM_BARCODE.CID
   - TBL_MO_BARCODE_PROD_LINK.CMO_ID = TBL_MO.CID
@@ -4448,6 +4607,7 @@
 | CVARIABLE_NAME | string | 是 | - | 特性名称 |
 | CWC_ID | long? | 是 | - | 工作中心ID，对应TBL_BD_WC.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_CONTROL_CHARACTERISTIC.CPROCESS_ID = TBL_BD_PROCESS.CID
   - TBL_SPC_CONTROL_CHARACTERISTIC.CWC_ID = TBL_BD_WC.CID
@@ -4468,6 +4628,7 @@
 | CTEMP_NO | string | 是 | - | 模板编号 |
 | CTYPE | string | 是 | - | 关联对象类型 |
 | CVARIABLE_ID | long? | 是 | - | 管控特性ID，对应TBL_SPC_CONTROL_CHARACTERISTIC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_CONTROL_CHARACTERISTIC_ITEM_LINK.CVARIABLE_ID = TBL_SPC_CONTROL_CHARACTERISTIC.CID
   - TBL_SPC_CONTROL_CHARACTERISTIC_ITEM_LINK.CITEM_NO = TBL_BD_ITEM.CITEM_NO
@@ -4487,6 +4648,7 @@
 | CUCL_CONTROL_MIDDLE | double? | 是 | - | 上控制图管制中线 |
 | CUCL_CONTROL_UP_LIMIT | double? | 是 | - | 上控制图管制上限 |
 | CVARIABLE_ID | long? | 是 | - | 管控特性ID，对应TBL_SPC_CONTROL_CHARACTERISTIC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_CONTROL_CHARACTERISTIC_LIMIT.CVARIABLE_ID = TBL_SPC_CONTROL_CHARACTERISTIC.CID
 
@@ -4500,6 +4662,7 @@
 | CCHART_TYPE | int? | 是 | - | 图类型（1上图、2下图） |
 | CRULE_ID | long? | 是 | - | 规则ID，对应TBL_SPC_RULE_OF_DISSENT.CID |
 | CVARIABLE_ID | long? | 是 | - | 管控特性ID，对应TBL_SPC_CONTROL_CHARACTERISTIC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_CONTROL_CHARACTERISTIC_RULE_LINK.CVARIABLE_ID = TBL_SPC_CONTROL_CHARACTERISTIC.CID
   - TBL_SPC_CONTROL_CHARACTERISTIC_RULE_LINK.CRULE_ID = TBL_SPC_RULE_OF_DISSENT.CID
@@ -4541,6 +4704,7 @@
 | CTYPE | int | 否 | - | 图类型（1单值图上图、2单值图下图、3均值图上图、4均值图下图） |
 | CVALUE | decimal | 否 | - | 统计值 |
 | CVARIABLE_ID | long | 否 | - | 管控特性ID，对应TBL_SPC_CONTROL_CHARACTERISTIC.CID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_DATA_REAL.CVARIABLE_ID = TBL_SPC_CONTROL_CHARACTERISTIC.CID
   - TBL_SPC_DATA_REAL.CITEM_ID = TBL_BD_ITEM.CID
@@ -4560,6 +4724,7 @@
 | CDESC | string | 是 | - | 规则描述 |
 | CTYPE | int | 否 | - | 规则类型 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SPC_RULE_OF_DISSENT.CID = TBL_SPC_CONTROL_CHARACTERISTIC_RULE_LINK.CRULE_ID
 
@@ -4588,6 +4753,7 @@
 | CREPORT_NAME | string | 是 | - | 报告名称 |
 | CSO_NO | string | 是 | - | 订单号 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OQC_SHIPMENT_GENERATE.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_OQC_SHIPMENT_GENERATE.CREPORT_ID = TBL_OQC_SHIPMENT_REPORT.CID
@@ -4623,6 +4789,7 @@
 | CREPORT_NAME | string | 是 | - | 报告名称 |
 | CSO_NO | string | 是 | - | 订单号 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OQC_SHIPMENT_GENERATE_LOG.CGENERATE_ID = TBL_OQC_SHIPMENT_GENERATE.CID
   - TBL_OQC_SHIPMENT_GENERATE_LOG.CREPORT_ID = TBL_OQC_SHIPMENT_REPORT.CID
@@ -4640,6 +4807,7 @@
 | CITEM_ID | long? | 是 | - | 外键，产品或物料ID  对应TBL_BD_ITEM.CID |
 | CREPORT_ID | long | 否 | - | 报告ID，对应TBL_OQC_SHIPMENT_REPORT.CID |
 | CSEQ | int | 否 | - | 排序 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OQC_SHIPMENT_ITEM_LINK.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_OQC_SHIPMENT_ITEM_LINK.CREPORT_ID = TBL_OQC_SHIPMENT_REPORT.CID
@@ -4656,6 +4824,7 @@
 | CNAME | string | 是 | - | 报告名称 |
 | CTYPE_ID | long? | 是 | - | 报告类型ID，对应TBL_OQC_SHIPMENT_REPORT_TYPE.CID |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OQC_SHIPMENT_REPORT.CTYPE_ID = TBL_OQC_SHIPMENT_REPORT_TYPE.CID
   - TBL_OQC_SHIPMENT_REPORT.CID = TBL_OQC_SHIPMENT_GENERATE.CREPORT_ID
@@ -4673,6 +4842,7 @@
 | CTYPE_DESC | string | 是 | - | 类型描述 |
 | CTYPE_NAME | string | 是 | - | 类型名称 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_OQC_SHIPMENT_REPORT_TYPE.CID = TBL_OQC_SHIPMENT_REPORT.CTYPE_ID
 
@@ -4692,6 +4862,7 @@
 | CDEVICE_NO | string | 是 | - | 设备编号 |
 | CPM_TEMPLATE_WC_LINK_ID | long? | 是 | - | 模板工作中心关联ID，对应TBL_EAM_PM_TEMP_WC_LINK.CID |
 | CREMARK | string | 是 | - | 服务器地址备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_PM_TEMPLATE_LINK_DEVICE.CPM_TEMPLATE_WC_LINK_ID = TBL_EAM_PM_TEMP_WC_LINK.CID
   - TBL_PM_TEMPLATE_LINK_DEVICE.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
@@ -4708,6 +4879,7 @@
 | CLOT_ID | string | 是 | - | 工单料号，对应TBL_BD_ITEM.CITEM_NO |
 | EQPID | string | 是 | - | 设备ID |
 | PANEL_LOT | string | 是 | - | 面板批次，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SJSKDATA_YYYYMM.CITEM_ID = TBL_BD_ITEM.CITEM_NO
   - TBL_SJSKDATA_YYYYMM.CLOT_ID = TBL_BD_ITEM.CITEM_NO
@@ -4727,6 +4899,7 @@
 | NEXTITEM | string | 是 | - | 下一料号 |
 | NEXTLOT | string | 是 | - | 下一工单 |
 | UpdateTime | DateTime? | 是 | - | 更新时间 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_SJSKEQPINFO.CURRENTITEM = TBL_BD_ITEM.CITEM_NO
   - TBL_SJSKEQPINFO.CURRENTLOT = TBL_MO.CMO_LOT
@@ -4742,6 +4915,7 @@
 | CDEVICE_ID | int | 否 | - | 设备ID， 对应TBL_EAP_DEVICE.CDEVICE_ID |
 | CREMARK | string | 是 | - | 备注 |
 | CTAG_ID | long? | 是 | - | 测点ID（关联测点配置）, 对应TBL_EAP_TAG.CTAG_ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_ALARM_CONTROL_LINK.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_ALARM_CONTROL_LINK.CTAG_ID = TBL_EAP_TAG.CTAG_ID
@@ -4756,6 +4930,7 @@
 | CDEVICE_ID | int | 否 | - | 设备ID， 对应TBL_EAP_DEVICE.CDEVICE_ID |
 | CITEM_ID | long? | 是 | - | 外键，产品ID  对应TBL_BD_ITEM.CID |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_ITEM_CONTROL_LINK.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_ITEM_CONTROL_LINK.CITEM_ID = TBL_BD_ITEM.CID
@@ -4770,6 +4945,7 @@
 | CDEVICE_ID | int | 否 | - | 设备ID， 对应TBL_EAP_DEVICE.CDEVICE_ID |
 | CNP_ITEM_ID | long? | 是 | - | 化验模板项ID，对应TBL_NP_TEMPLATE_ITEM.CID |
 | CREMARK | string | 是 | - | 备注 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_POTION_ITEM_CONTROL_LINK.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
   - TBL_EAP_POTION_ITEM_CONTROL_LINK.CNP_ITEM_ID = TBL_NP_TEMPLATE_ITEM.CID
@@ -4793,6 +4969,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CSTART_CONTROL | TimeSpan | 否 | - | 管控开始时间 |
 | CTIME_CHECK | string | 是 | - | 时间段校验开关（Y启用，N或空禁用） |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_EAP_PRODUCE_CONTROL_DEVICE.CDEVICE_ID = TBL_EAP_DEVICE.CDEVICE_ID
 
@@ -4814,6 +4991,7 @@
 | CT_DATA3 | string | 是 | - | 测量值3 |
 | CT_DATA4 | string | 是 | - | 测量值4 |
 | CT_DATA5 | string | 是 | - | 测量值5 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_KTHD.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
 
@@ -4878,6 +5056,7 @@
 | CWIDE | decimal? | 是 | - | 宽度 |
 | CXK_TOLERANCE | string | 是 | - | 线宽管控公差 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_MAIN.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_FA_TXDD_MAIN.CAUDIT_USER = TBL_SYS_USER.CUSER_NAME
@@ -4920,6 +5099,7 @@
 | CKNTHF | string | 是 | - | 孔内铜厚F |
 | CMAIN_ID | long | 否 | - | 主表ID，对应TBL_FA_TXDD_MAIN.CID |
 | CRESULT | string | 是 | - | 判定结果；ACC：通过；REJ：不通过 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_QPBT.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
   - TBL_FA_TXDD_QPBT.CINSPECT_USER = TBL_SYS_USER.CUSER_NAME
@@ -4938,6 +5118,7 @@
 | CREMARK | string | 是 | - | 备注 |
 | CRESULT | string | 是 | - | 判定结果；ACC：通过；REJ：不通过 |
 | CTOLERANCE | string | 是 | - | 公差 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_SKKJ.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
 
@@ -4964,6 +5145,7 @@
 | CZXXK_YQ | string | 是 | - | 阻焊线宽要求 |
 | CZXXX_SC | string | 是 | - | 阻焊线隙实测 |
 | CZXXX_YQ | string | 是 | - | 阻焊线隙要求 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_SKXK.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
 
@@ -4980,6 +5162,7 @@
 | CX_DATA3 | string | 是 | - | 锡厚数据3 |
 | CX_DATA4 | string | 是 | - | 锡厚数据4 |
 | CX_DATA5 | string | 是 | - | 锡厚数据5 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_XHCL.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
 
@@ -4997,6 +5180,7 @@
 | CRESULT | string | 是 | - | 判定结果；ACC：通过；REJ：不通过 |
 | CSTANDARD | string | 是 | - | 标准值 |
 | CTOLERANCE | string | 是 | - | 公差 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_TXDD_ZKCS.CMAIN_ID = TBL_FA_TXDD_MAIN.CID
 
@@ -5051,6 +5235,7 @@
 | CY_TARGET6 | string | 是 | - | Y靶值6 |
 | CYB_PROGRAM | string | 是 | - | 压板程序 |
 | CID | long | 否 | - | 主键 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_YHYJ_MAIN.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - TBL_FA_YHYJ_MAIN.CAUDIT_USER = TBL_SYS_USER.CUSER_NAME
@@ -5073,6 +5258,7 @@
 | CNCXBHD_RESULT | string | 是 | - | 内层芯板厚度判定 |
 | CYBHD_MI | string | 是 | - | 压板厚度MI值 |
 | CYBHD_RESULT | string | 是 | - | 压板厚度判定 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_FA_YHYJ_MI.CMAIN_ID = TBL_FA_YHYJ_MAIN.CID
 
@@ -5097,6 +5283,7 @@
 | CREASON | string | 是 | - | 跟进原因：来源数据字典：MEP_REASON |
 | CSTATUS | long | 否 | - | 状态：1：待确认；2：已确认 |
 | CTYPE | string | 是 | - | 类型：NPI--NPI流程 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - TBL_MEP_MATERIAL_PARAM.CITEM_ID = TBL_BD_ITEM.CID
   - TBL_MEP_MATERIAL_PARAM.CPROCESS_ID = TBL_BD_PROCESS.CID
@@ -5118,6 +5305,7 @@
 | 生产编号 | string | 是 | - | 生产编号，对应TBL_BD_ITEM.CITEM_NO |
 | 终端产品编号 | string? | 是 | - | 终端产品编号 |
 | 终端产品名称 | string? | 是 | - | 终端产品名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5159,6 +5347,7 @@
 | Steps | string | 是 | - | 工序步骤 |
 | Unit | string | 是 | - | 单位 |
 | Warehouse | string | 是 | - | 仓库 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5181,6 +5370,7 @@
 | sheetWid | decimal? | 是 | - | 版面宽度 |
 | Type | string | 是 | - | 类型 |
 | WoNumber | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5215,6 +5405,7 @@
 | 制造单号 | string | 是 | - | 制造单号 |
 | 制造单类型 | string | 是 | - | 制造单类型 |
 | 状态 | string | 是 | - | 状态 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5231,6 +5422,7 @@
 | CITEM_NAME | string | 是 | - | 物料名称 |
 | CITEM_NO | string | 是 | - | 物料编号，对应TBL_BD_ITEM.CITEM_NO |
 | CSQE_RESULT | string | 是 | - | SQE结果；OK：通过 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ERP_IQC_RESULT.CITEM_NO = TBL_BD_ITEM.CITEM_NO
 
@@ -5263,6 +5455,7 @@
 | 物料名称 | string | 是 | - | 物料名称 |
 | 制单人员 | string | 是 | - | 制单人员 |
 | 状态 | string | 是 | - | 状态：完成；活动 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5275,6 +5468,7 @@
 | PartNum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | Process | string | 是 | - | 工序名称，对应TBL_BD_PROCESS.CPROCESS_NAME |
 | ProcessCode | string | 是 | - | 工序代码，对应TBL_BD_PROCESS.CPROCESS_NO |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5291,6 +5485,7 @@
 | partNum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | soNumber | string | 是 | - | 销售订单号 |
 | standard | string | 是 | - | 规格 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5302,6 +5497,7 @@
 |--------|----------|----------|--------|------|
 | CODE | string | 是 | - | 物料编码，对应TBL_BD_ITEM.CITEM_NO |
 | NAME | string | 是 | - | 供应商名称 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VM_ITEM_SUPPLIER.CODE = TBL_BD_ITEM.CITEM_NO
 
@@ -5315,6 +5511,7 @@
 | moNumber | string | 是 | - | MO号 |
 | Partnum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | woNumber | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5341,6 +5538,7 @@
 | MaterialStandard | string | 是 | - | 物料规格 |
 | Partnum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | TG值 | string? | 是 | - | TG值 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5365,6 +5563,7 @@
 | MaterialName | string | 是 | - | 物料名称 |
 | MaterialStandard | string | 是 | - | 物料规格 |
 | TG值 | string | 是 | - | TG值 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5379,6 +5578,7 @@
 | name | string | 是 | - | 仓库名称 |
 | recId | string | 是 | - | 记录ID |
 | warehouseId | string | 是 | - | 仓库ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5395,6 +5595,7 @@
 | 生产编号 | string | 是 | - | 生产编号 |
 | 数量 | int | 否 | - | 数量 |
 | 订单状态 | string | 是 | - | 订单状态，Outsoucing：外协中；Shipped：已发货；Cancel：已取消；Close：已关闭；Valid：生效中 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5408,6 +5609,7 @@
 | ifActive | int | 否 | - | 是否激活；1：已激活；0：未激活 |
 | name | string | 是 | - | 仓库名称 |
 | recId | string | 是 | - | 记录ID |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5421,6 +5623,7 @@
 | CDEVICE_NAME | string | 是 | - | 设备名称 |
 | CTAG_NAME | string | 是 | - | 标签名称 |
 | CVALUE | string | 是 | - | 状态值；分为 工作中、报警中、停机中 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5432,6 +5635,7 @@
 |--------|----------|----------|--------|------|
 | ParameterVal | string | 是 | - | 特殊要求 |
 | partNum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5452,6 +5656,7 @@
 | CPROCESS_NO | string | 是 | - | 工艺编号，对应TBL_BD_PROCESS.CPROCESS_NO |
 | CUNIT | string | 是 | - | 单位 |
 | MfgPartCode | string | 是 | - | 制造部件号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VW_MI_PROCESS_GENERAL.CITEM_NO = TBL_BD_ITEM.CITEM_NO
   - VW_MI_PROCESS_GENERAL.CPROCESS_NO = TBL_BD_PROCESS.CPROCESS_NO
@@ -5466,6 +5671,7 @@
 | mfgPartCode | string | 是 | - | 制造部件号 |
 | partNum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | woNumber | string | 是 | - | 工单号，对应TBL_MO.CMO_LOT |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5482,6 +5688,7 @@
 | partnum | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
 | qty | decimal | 否 | - | 数量 |
 | standard | string | 是 | - | 规格 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---
@@ -5501,6 +5708,7 @@
 | INTERNAL_PART_NUM | string | 是 | - | 内部料号 |
 | ORDER_QTY | decimal? | 是 | - | 订单数量 |
 | PART_NUM | string | 是 | - | 料号，对应TBL_BD_ITEM.CITEM_NO |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：
   - VW_SO_INFO.PART_NUM = TBL_BD_ITEM.CITEM_NO
   - VW_SO_INFO.CUSTOMER_NO = TBL_BD_CUSTOMER.CUSTOMER_NO
@@ -5516,6 +5724,7 @@
 | 理论镀铜量 | decimal? | 是 | - | 理论镀铜量 |
 | 时间 | string | 是 | - | 时间 |
 | CDEVICE_NAME | string | 是 | - | VCP设备名称编号 |
+| CSTATE | string | 是 | - | 状态标识，A：有效；D：无效 |
 - **关联关系**：无
 
 ---

@@ -1,0 +1,70 @@
+【维表映射规则·自动生成】事实表：**TBL_SFC_WS_LOG**（生产记录表），别名 **`l`**。
+生成 SQL 时**必须**按下述 JOIN 与 SELECT 展示列执行（片段无对应维表则跳过该条并在【相关表】说明）。
+
+### 映射 `work_center`（事实列：CWC_ID）
+- 说明：TBL_BD_WC 同表两级：父级 KL/ZK+开料/钻孔；子级 ZLA-…+机台名。报工 CWC_ID 多为子级。
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_BD_WC wc WITH (NOLOCK) ON wc.CID = l.CWC_ID`
+  - `LEFT JOIN dbo.TBL_BD_WC wc_p WITH (NOLOCK) ON wc_p.CID = wc.CPARENT`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `COALESCE(wc_p.CWC_NAME, wc.CWC_NAME) AS [工作中心名称]`
+  - `COALESCE(wc_p.CWC_NO, wc.CWC_NO) AS [工作中心编码]`
+  - `wc.CWC_NAME AS [机台名称]`
+  - `wc.CWC_NO AS [机台编码]`
+- **禁止**：用 TBL_EAP_DEVICE 解析 CWC_ID
+- **禁止**：p.CPROCESS_NAME AS [工作中心名称]
+- **禁止**：仅 wc.CWC_NAME AS [工作中心名称] 且不输出 [机台名称]（未取父级）
+- **禁止**：wc.CID = l.CPROCESS_ID 或 p.CID = l.CWC_ID
+
+### 映射 `process`（事实列：CPROCESS_ID）
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_BD_PROCESS p WITH (NOLOCK) ON p.CID = l.CPROCESS_ID`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `p.CPROCESS_NAME AS [工序名称]`
+  - `p.CPROCESS_NO AS [工序编码]`
+- **禁止**：p.CPROCESS_ID 作工序主键侧关联（工序表主键是 p.CID）
+- **禁止**：wc.CWC_NAME AS [工序名称]
+
+### 映射 `item`（事实列：CITEM_ID）
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_BD_ITEM i WITH (NOLOCK) ON i.CID = l.CITEM_ID`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `i.CITEM_NO AS [料号]`
+  - `i.CITEM_NAME AS [品名]`
+
+### 映射 `start_user`（事实列：CSTART_USER_NAME）
+- 类型：**账号字符串** → `TBL_SYS_USER.CUSER_NAME`，姓名取 `CDISPLAY_NAME`。
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_SYS_USER u_s WITH (NOLOCK) ON u_s.CUSER_NAME = l.CSTART_USER_NAME`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `l.CSTART_USER_NAME AS [开工人账号]`
+  - `u_s.CDISPLAY_NAME AS [开工人姓名]`
+- **禁止**：CSTART_USER_NAME AS [开工人姓名] 且无 JOIN TBL_SYS_USER
+- **禁止**：用 CID 关联用户（日志存的是账号字符串）
+
+### 映射 `end_user`（事实列：CEND_USER_NAME）
+- 类型：**账号字符串** → `TBL_SYS_USER.CUSER_NAME`，姓名取 `CDISPLAY_NAME`。
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_SYS_USER u_e WITH (NOLOCK) ON u_e.CUSER_NAME = l.CEND_USER_NAME`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `l.CEND_USER_NAME AS [完工人账号]`
+  - `u_e.CDISPLAY_NAME AS [完工人姓名]`
+
+### 映射 `check_user`（事实列：CCHECK_USER_NAME）
+- 类型：**账号字符串** → `TBL_SYS_USER.CUSER_NAME`，姓名取 `CDISPLAY_NAME`。
+- **JOIN**（逐条写出，勿省略 `ON`）：
+  - `LEFT JOIN dbo.TBL_SYS_USER u_c WITH (NOLOCK) ON u_c.CUSER_NAME = l.CCHECK_USER_NAME`
+- **SELECT 推荐列**（替代裸 ID/裸账号）：
+  - `l.CCHECK_USER_NAME AS [审核人账号]`
+  - `u_c.CDISPLAY_NAME AS [审核人姓名]`
+
+### 全局禁止
+- TBL_SFC_WS_LOG 上使用 CCUSTOMER_CODE（须 CUSTOMER_CODE）
+- TBL_SFC_WS_LOG 上使用 CSCANNED_BARCODE（须 CSCAN_BARCODE）
+- FROM/JOIN 表名与 WITH (NOLOCK) 拆成两行
+
+### 定稿自检
+- 是否已 `FROM dbo.TBL_SFC_WS_LOG l WITH (NOLOCK)`（hint 与表名同一行）；是否已包含上述全部 LEFT JOIN；工作中心/工序/人员列是否来自对应维表而非同源。
+
+--- join_tables ---
+TBL_BD_WC, TBL_BD_PROCESS, TBL_BD_ITEM, TBL_SYS_USER

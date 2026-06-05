@@ -447,6 +447,7 @@
       "label": "工单信息表",
       "default_for_keywords": [
         "工单",
+        "生产工单",
         "MO_LOT",
         "批次"
       ],
@@ -751,7 +752,8 @@
           "expr": "mo.CID",
           "as": "主键ID"
         }
-      ]
+      ],
+      "default_order_by": "mo.CPLAN_START_TIME DESC"
     },
     "TBL_SFC_WS_LOG_ITEM": {
       "fact_alias": "i",
@@ -18163,7 +18165,10 @@
       "fact_alias": "su",
       "label": "系统用户表",
       "default_for_keywords": [
-        "系统用户表"
+        "系统用户表",
+        "系统用户",
+        "用户表",
+        "用户列表"
       ],
       "mappings": [
         {
@@ -18189,6 +18194,64 @@
             }
           ],
           "forbidden": []
+        },
+        {
+          "id": "is_locked_out",
+          "fact_columns": [
+            "CIS_LOCKED_OUT"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(su.CIS_LOCKED_OUT)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE su.CIS_LOCKED_OUT END",
+              "as": "是否锁定"
+            }
+          ],
+          "forbidden": [
+            "su.CIS_LOCKED_OUT AS [是否锁定]"
+          ],
+          "match_type": "enum",
+          "notes": "是否锁定：Y是、N否"
+        },
+        {
+          "id": "is_online",
+          "fact_columns": [
+            "CIS_ONLINE"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(su.CIS_ONLINE)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' ELSE su.CIS_ONLINE END",
+              "as": "是否在线"
+            }
+          ],
+          "forbidden": [
+            "su.CIS_ONLINE AS [是否在线]"
+          ],
+          "match_type": "enum",
+          "notes": "是否在线：Y是、N否"
+        },
+        {
+          "id": "state",
+          "fact_columns": [
+            "CSTATE"
+          ],
+          "joins": [],
+          "select": [
+            {
+              "expr": "CASE UPPER(RTRIM(su.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE su.CSTATE END",
+              "as": "状态标识"
+            }
+          ],
+          "forbidden": [
+            "su.CSTATE AS [状态标识]",
+            "su.CSTATE AS [状态]",
+            "su.CSTATE AS [状态中文]",
+            "CASE UPPER(RTRIM(su.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE su.CSTATE END AS [状态中文]",
+            "su.CPASSWORD AS [密码]"
+          ],
+          "match_type": "enum",
+          "notes": "A→有效、D→无效；只输出一列[状态标识]，禁止[状态中文]/[状态]"
         }
       ],
       "display_columns": [
@@ -18210,7 +18273,7 @@
         },
         {
           "expr": "su.CDISPLAY_NAME",
-          "as": "用户显示名"
+          "as": "显示名称"
         },
         {
           "expr": "su.CEMAIL",
@@ -18229,20 +18292,8 @@
           "as": "性别"
         },
         {
-          "expr": "su.CIS_LOCKED_OUT",
-          "as": "是否锁定"
-        },
-        {
-          "expr": "su.CIS_ONLINE",
-          "as": "是否在线"
-        },
-        {
           "expr": "su.CMOBILEPHONE",
           "as": "手机号"
-        },
-        {
-          "expr": "su.CPASSWORD",
-          "as": "密码"
         },
         {
           "expr": "su.CUSER_NAME",
@@ -18256,7 +18307,8 @@
           "expr": "su.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "default_order_by": "su.CDATETIME_LAST_LOGIN DESC"
     },
     "TBL_SYS_USER_ORG_MAP": {
       "fact_alias": "suo",
