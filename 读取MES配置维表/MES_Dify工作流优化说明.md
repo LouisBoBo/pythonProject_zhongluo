@@ -360,19 +360,21 @@ for q in ['查询近一个月维修工单', '压合工序生产记录', 'IPQC检
 
 ```bash
 cd 读取MES配置维表
-
-# 按需执行（改了什么跑什么）
-python3 build_mes_catalog_bundle.py    # 表清单
-python3 build_mes_schema_bundle.py     # 表结构
-python3 build_dify_bundle.py           # 维表 + mes_sql_multijoin 嵌入
-
-# 语法检查（推荐）
-python3 -m py_compile dify_mes_table_catalog.py
-python3 -m py_compile dify_mes_schema_by_tables.py
-python3 -m py_compile dify_mes_dimension_node.py
+python3 build_all.py
 ```
 
-Dify：**替换节点全文 → 核对连线 → 发布 workflow**（不发布不生效）。
+等价于依次执行 `build_mes_catalog_bundle.py`、`build_mes_schema_bundle.py`、`build_dify_bundle.py`，并自动 `py_compile` 检查 3 个 `dify_*.py`。
+
+单独打包（仅改其中一项时可选）：
+
+```bash
+python3 build_mes_catalog_bundle.py   # 仅表清单
+python3 build_mes_schema_bundle.py    # 仅表结构
+python3 build_dify_bundle.py          # 仅维表 .map
+python3 build_mes_sql_rules_db_bundle.py  # 仅 learned 规则节点（少改）
+```
+
+Dify：**替换 3 个 dify 代码节点全文 → 核对连线 → 发布 workflow**。
 
 ### 11.4 工作流连线速查
 
