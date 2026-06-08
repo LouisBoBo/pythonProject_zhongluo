@@ -56211,7 +56211,8 @@
             "tu.recId = sbus.modifiedBy",
             "JOIN T_User ON recId = sbus.modifiedBy",
             "tu.userCode AS [修改人]",
-            "modifiedBy 为字符串用户名，禁止 JOIN T_User ON recId = 事实表.modifiedBy；修改人直接用 事实表.modifiedBy AS [修改人]",
+            "FGI_IQCResult/FGI_IQCItem/FGI_IQCHistory/FGI_IQCWF/P_WO 等表无 modifiedBy 列，禁止写 事实表.modifiedBy",
+            "有 modifiedBy 的表其为字符串用户名，禁止 JOIN T_User ON recId = 事实表.modifiedBy；修改人直接用 事实表.modifiedBy AS [修改人]",
             "S_BusinessMan 列名为 name/telephone/email，禁止 bm.businessManName 等编造列名",
             "T_User 列名为 loginName/userCode/employeeName，禁止 tu.userName/tu.realName"
           ],
@@ -78756,6 +78757,7 @@
     "FROM/JOIN 表名与 WITH (NOLOCK) 拆成两行",
     "无时间条件的明细列表查询省略 ORDER BY（须按主时间列 DESC 由近到远）",
     "使用 MES 表名/字段（TBL_*、CID、CWC_ID 等）解析 ERP 业务",
-    "modifiedBy 为字符串用户名，禁止 JOIN T_User ON recId = 事实表.modifiedBy；修改人直接用 事实表.modifiedBy AS [修改人]"
+    "FGI_IQCResult/FGI_IQCItem/FGI_IQCHistory/FGI_IQCWF/P_WO 等表无 modifiedBy 列，禁止写 事实表.modifiedBy",
+    "有 modifiedBy 的表其为字符串用户名，禁止 JOIN T_User ON recId = 事实表.modifiedBy；修改人直接用 事实表.modifiedBy AS [修改人]"
   ]
 }

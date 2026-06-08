@@ -437,10 +437,21 @@
           "as": "工作数量"
         },
         {
+          "expr": "l.CUSTOMER_CODE",
+          "as": "客户编码"
+        },
+        {
+          "expr": "l.CSCAN_BARCODE",
+          "as": "扫描条码"
+        },
+        {
           "expr": "l.CID",
           "as": "主键ID"
         }
-      ]
+      ],
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "l.CSTART_TIME DESC, l.CID DESC"
     },
     "TBL_MO": {
       "fact_alias": "mo",
@@ -1410,11 +1421,11 @@
           "select": [
             {
               "expr": "sysus.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "as": "报修人姓名"
             },
             {
               "expr": "sysus.CUSER_NAME",
-              "as": "用户账号"
+              "as": "报修人工号"
             }
           ],
           "forbidden": []
@@ -1434,11 +1445,11 @@
           "select": [
             {
               "expr": "sysus2.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "as": "指派人姓名"
             },
             {
               "expr": "sysus2.CUSER_NAME",
-              "as": "用户账号"
+              "as": "指派人工号"
             }
           ],
           "forbidden": []
@@ -1458,11 +1469,11 @@
           "select": [
             {
               "expr": "sysus3.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "as": "审核人姓名"
             },
             {
               "expr": "sysus3.CUSER_NAME",
-              "as": "用户账号"
+              "as": "审核人工号"
             }
           ],
           "forbidden": []
@@ -1482,11 +1493,11 @@
           "select": [
             {
               "expr": "sysus4.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "as": "关闭人姓名"
             },
             {
               "expr": "sysus4.CUSER_NAME",
-              "as": "用户账号"
+              "as": "关闭人工号"
             }
           ],
           "forbidden": []
@@ -1516,30 +1527,6 @@
           "forbidden": []
         },
         {
-          "id": "ode_to_sys_user",
-          "fact_columns": [
-            "CODE"
-          ],
-          "joins": [
-            {
-              "alias": "sysus5",
-              "table": "TBL_SYS_USER",
-              "on": "sysus5.CUSER_NAME = er.CODE"
-            }
-          ],
-          "select": [
-            {
-              "expr": "sysus5.CDISPLAY_NAME",
-              "as": "用户姓名"
-            },
-            {
-              "expr": "sysus5.CUSER_NAME",
-              "as": "用户账号"
-            }
-          ],
-          "forbidden": []
-        },
-        {
           "id": "repair_man_to_sys_user",
           "fact_columns": [
             "CREPAIR_MAN"
@@ -1554,11 +1541,11 @@
           "select": [
             {
               "expr": "sysus6.CDISPLAY_NAME",
-              "as": "用户姓名"
+              "as": "维修人姓名"
             },
             {
               "expr": "sysus6.CUSER_NAME",
-              "as": "用户账号"
+              "as": "维修人工号"
             }
           ],
           "forbidden": []
@@ -1680,7 +1667,9 @@
           "expr": "er.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "compact_rules": true,
+      "list_default_main_only": true
     },
     "TBL_MEP_MATERIAL_PARAM": {
       "fact_alias": "mmp",
@@ -3738,10 +3727,6 @@
               "as": "审核/驳回人，对应TBL_SYS_USER.CUSER_NAME"
             },
             {
-              "expr": "eamre.CODE",
-              "as": "用户工号，对应TBL_SYS_USER.CUSER_NAME"
-            },
-            {
               "expr": "eamre.CREPAIR_CODE",
               "as": "维修单编号"
             }
@@ -3779,10 +3764,6 @@
             {
               "expr": "eamre.CAUDIT_USERNAME",
               "as": "审核/驳回人，对应TBL_SYS_USER.CUSER_NAME"
-            },
-            {
-              "expr": "eamre.CODE",
-              "as": "用户工号，对应TBL_SYS_USER.CUSER_NAME"
             },
             {
               "expr": "eamre.CREPAIR_CODE",
@@ -3850,10 +3831,6 @@
             {
               "expr": "eamre.CAUDIT_USERNAME",
               "as": "审核/驳回人，对应TBL_SYS_USER.CUSER_NAME"
-            },
-            {
-              "expr": "eamre.CODE",
-              "as": "用户工号，对应TBL_SYS_USER.CUSER_NAME"
             },
             {
               "expr": "eamre.CREPAIR_CODE",

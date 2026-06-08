@@ -63,7 +63,15 @@ def main(error_msg: str = None, **kwargs: Any) -> dict[str, str]:
         if m_sql:
             sql_in_err = m_sql.group(1)
 
-        if invalid_item.lower() == "modifiedby" and re.search(
+        if invalid_item.upper() == "CODE" and re.search(
+            r"\bTBL_EAM_REPAIR\b|\ber\.CODE\b",
+            sql_in_err or error_msg,
+            re.I,
+        ):
+            rules.append(
+                "【硬约束·207】表 TBL_EAM_REPAIR 严禁使用 CODE 字段，数据库不存在，必报错。"
+            )
+        elif invalid_item.lower() == "modifiedby" and re.search(
             r"\bFGI_IQCRESULT\b", sql_in_err or error_msg, re.I
         ):
             rules.append(
@@ -130,7 +138,15 @@ def main(error_msg: str = None, **kwargs: Any) -> dict[str, str]:
         )
         if match_102:
             invalid_item = match_102.group(1) or match_102.group(2)
-            rules.append(f"【硬约束·102】别名含 {invalid_item} 必须用 [] 包裹，如 AS [别名]")
+            token = (invalid_item or "").strip()
+            if token and len(token) > 3 and token not in {"/", "（", "）"}:
+                rules.append(
+                    f"【硬约束·102】别名含 {token} 必须用 [] 包裹，如 AS [别名]"
+                )
+            else:
+                rules.append(
+                    "【硬约束·102】SQL 语法错误，检查别名是否用 [] 包裹、括号是否配对。"
+                )
         else:
             rules.append("【硬约束·102】SQL 语法错误，检查别名是否用 [] 包裹、括号是否配对。")
         rules.append("【硬约束】中文别名含 / ( ) （ ）必须整体加 []。")

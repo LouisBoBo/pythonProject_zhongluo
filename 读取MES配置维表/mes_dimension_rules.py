@@ -290,6 +290,214 @@ def _join_line(alias: str, table: str, on: str, fact_alias: str) -> str:
     return f"LEFT JOIN dbo.{table} {alias} WITH (NOLOCK) ON {on_sql}"
 
 
+def _compact_join_triggers(mappings: List[Dict[str, Any]]) -> str:
+    """从映射推导「按需 JOIN」触发词，避免 EAM 文案套到 SFC 等表。"""
+    hints: List[str] = []
+    dim_tables: set[str] = set()
+    has_account = False
+    for mp in mappings:
+        if mp.get("match_type") == "enum" or not mp.get("joins"):
+            continue
+        if mp.get("match_type") == "account":
+            has_account = True
+        for j in mp.get("joins") or []:
+            dim_tables.add((j.get("table") or "").upper())
+    if has_account:
+        hints.append("人员/姓名/账号")
+    if "TBL_BD_WC" in dim_tables:
+        hints.append("机台/工作中心")
+    if "TBL_BD_CUSTOMER" in dim_tables:
+        hints.append("客户名称/客户编号")
+    if "TBL_BD_ITEM" in dim_tables:
+        hints.append("料号/品名/物料")
+    if "TBL_BD_PROCESS" in dim_tables:
+        hints.append("工序名称/工序编码")
+    if "TBL_MO" in dim_tables:
+        hints.append("工单编号/工单批次")
+    if "TBL_NP_TEMPLATE" in dim_tables:
+        hints.append("模板名称")
+    hints.append("明细/详情/全部字段")
+    return "、".join(hints)
+
+
+def _compact_forbidden_join_cols(mappings: List[Dict[str, Any]]) -> List[str]:
+    """列表默认禁止裸输出的外键/工号列（仅含实际配置了 JOIN 的映射）。"""
+    cols: List[str] = []
+    for mp in mappings:
+        if mp.get("match_type") == "enum" or not mp.get("joins"):
+            continue
+        cols.extend(mp.get("fact_columns") or [])
+    return sorted(set(cols))
+
+
+def _build_query_rules_compact(
+    tname: str,
+    tcfg: Dict[str, Any],
+    alias: str,
+    label: str,
+    mappings: List[Dict[str, Any]],
+    cfg: Dict[str, Any],
+    *,
+    id_filter: Optional[Set[str]] = None,
+    full_detail: bool = False,
+) -> str:
+    """精简版维表规则：合并 JOIN/SELECT，跳过混查枚举与重复译码段。"""
+    default_ob = (tcfg.get("default_order_by") or "").strip()
+    list_main_only = bool(tcfg.get("list_default_main_only"))
+    lines: List[str] = [
+        f"【维表映射·{tname}】{label}，别名 **`{alias}`**。",
+        f"`FROM dbo.{tname} {alias} WITH (NOLOCK)`；SELECT 每列须 `AS [中文名]`，禁裸英文字段作表头。",
+    ]
+    if list_main_only:
+        lines.append(
+            "**列表默认（用户未点名关联维表字段/明细/详情/全部字段）**："
+            "只 SELECT **本表列 + 枚举译码**，**不要** JOIN 维表；"
+            "用户点名或要求明细时再 JOIN 下方维表。"
+        )
+    if default_ob:
+        lines.append(
+            f"无时间 WHERE 的明细列表须 `ORDER BY {default_ob}`；仅 `COUNT(*)` 或 `GROUP BY` 除外。"
+        )
+    lines.append("")
+
+    enum_mps = [
+        mp
+        for mp in mappings
+        if mp.get("match_type") == "enum"
+        and (id_filter is None or (mp.get("id") or "") in id_filter)
+    ]
+    if enum_mps:
+        title = (
+            "### 枚举译码（列表默认必出，必写 CASE，禁裸码）"
+            if list_main_only
+            else "### 枚举译码（必写 CASE，禁裸码）"
+        )
+        lines.append(title)
+        for mp in enum_mps:
+            fcols = ", ".join(mp.get("fact_columns") or [])
+            for sel in mp.get("select") or []:
+                expr = _apply_alias(sel.get("expr") or "", alias)
+                as_name = sel.get("as") or ""
+                lines.append(f"- **{fcols}** → `[{as_name}]`：`{expr} AS [{as_name}]`")
+        lines.append("")
+
+    display_cols: List[Dict[str, Any]] = tcfg.get("display_columns") or []
+    if display_cols:
+        dc_title = (
+            "### 本表列（列表默认只输出这些 + 枚举，禁 JOIN 维表列）"
+            if list_main_only
+            else "### 本表列"
+        )
+        lines.append(dc_title)
+        for dc in display_cols:
+            expr = _apply_alias(dc.get("expr") or "", alias)
+            as_name = dc.get("as") or ""
+            lines.append(f"- `{expr} AS [{as_name}]`")
+        lines.append("")
+
+    seen_joins: Set[str] = set()
+    join_lines: List[str] = []
+    dim_select_lines: List[str] = []
+    forbidden_lines: List[str] = []
+    join_fact_cols: List[str] = []
+
+    for mp in mappings:
+        mid = mp.get("id") or ""
+        if id_filter is not None and mid not in id_filter:
+            continue
+        if mp.get("match_type") == "enum":
+            for fb in mp.get("forbidden") or []:
+                forbidden_lines.append(fb)
+            continue
+        if not mp.get("joins"):
+            continue
+
+        fact_cols = ", ".join(mp.get("fact_columns") or [])
+        note = (mp.get("notes") or "").strip()
+        hint = f"（{note}）" if note else ""
+        joins = mp.get("joins") or []
+        for j in joins:
+            jl = _join_line(
+                j.get("alias") or "dim",
+                j.get("table") or "",
+                j.get("on") or "",
+                alias,
+            )
+            if jl not in seen_joins:
+                seen_joins.add(jl)
+                join_lines.append(f"- `{jl}`  ← {fact_cols}{hint}")
+
+        sel_parts: List[str] = []
+        for sel in mp.get("select") or []:
+            expr = _apply_alias(sel.get("expr") or "", alias)
+            as_name = sel.get("as") or ""
+            sel_parts.append(f"`{expr} AS [{as_name}]`")
+        if sel_parts:
+            dim_select_lines.append(
+                f"- {fact_cols}{hint}：{'；'.join(sel_parts)}"
+            )
+        for fc in mp.get("fact_columns") or []:
+            join_fact_cols.append(fc)
+        for fb in mp.get("forbidden") or []:
+            forbidden_lines.append(fb)
+
+    if join_lines:
+        join_title = (
+            "### 按需 JOIN（列表默认**跳过**；用户提下列信息时才写）"
+            if list_main_only
+            else "### JOIN（须全部写出，勿省略 ON）"
+        )
+        lines.append(join_title)
+        if list_main_only:
+            lines.append(f"- 触发示例：{_compact_join_triggers(mappings)}")
+        lines.extend(join_lines)
+        lines.append("")
+
+    if dim_select_lines:
+        dim_title = (
+            "### 按需维表列（列表默认**不 SELECT**；与上方 JOIN 同开同关）"
+            if list_main_only
+            else "### 维表列（替代裸 ID/工号）"
+        )
+        lines.append(dim_title)
+        lines.extend(dim_select_lines)
+        lines.append("")
+
+    fb_set: List[str] = []
+    seen_fb: Set[str] = set()
+    for fb in forbidden_lines:
+        if fb and fb not in seen_fb:
+            seen_fb.add(fb)
+            fb_set.append(fb)
+    if list_main_only and join_fact_cols:
+        bare_cols = _compact_forbidden_join_cols(mappings)
+        if bare_cols:
+            man_cols = ", ".join(bare_cols)
+            fb_set.append(
+                f"列表默认禁止裸输出外键/工号：{man_cols}（须按需 JOIN 维表列或整段省略）"
+            )
+    if fb_set:
+        lines.append("### 禁止")
+        for fb in fb_set:
+            lines.append(f"- {fb}")
+        lines.append("")
+
+    lines.append("### 自检")
+    if list_main_only:
+        lines.append(
+            f"- 列表默认：仅 `FROM dbo.{tname} {alias}` + 本表列 + 枚举 CASE，无维表 JOIN；"
+            f"按需场景才补 JOIN 与维表列。"
+        )
+    else:
+        lines.append(
+            f"- `FROM dbo.{tname} {alias} WITH (NOLOCK)` 与上述全部 LEFT JOIN；"
+            f"枚举列已 CASE 译码；人员/故障/工作中心列来自维表而非裸外键。"
+        )
+    if default_ob:
+        lines.append(f"- 无时间条件明细已 `ORDER BY {default_ob}`。")
+    return "\n".join(lines).strip()
+
+
 def build_query_rules(
     fact_table: str,
     *,
@@ -317,6 +525,18 @@ def build_query_rules(
         id_filter = {str(x).strip() for x in mapping_ids if str(x).strip()}
 
     full_detail = tname in _FULL_DETAIL_SELECT_TABLES
+    if tcfg.get("compact_rules"):
+        return _build_query_rules_compact(
+            tname,
+            tcfg,
+            alias,
+            label,
+            mappings,
+            cfg,
+            id_filter=id_filter,
+            full_detail=full_detail,
+        )
+
     lines: List[str] = [
         f"【维表映射规则·自动生成】事实表：**{tname}**（{label}），别名 **`{alias}`**。",
         "生成 SQL 时**必须**按下述 JOIN 与 SELECT 展示列执行（片段无对应维表则跳过该条并在【相关表】说明）。",
@@ -814,6 +1034,14 @@ def main(
             mids = [str(x).strip() for x in mapping_ids if str(x).strip()]
 
     rules = build_query_rules(table, config=cfg, mapping_ids=mids)
+    try:
+        from mes_sql_multijoin import build_multijoin_query_hints
+
+        mj_hints = build_multijoin_query_hints(user_question, table, cfg)
+        if mj_hints:
+            rules = rules.rstrip() + "\n\n" + mj_hints
+    except ImportError:
+        pass
     out: Dict[str, Any] = {
         "query_rules": rules,
         "fact_table": table,

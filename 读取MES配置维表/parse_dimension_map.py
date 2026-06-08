@@ -94,7 +94,14 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
                 config["global_forbidden"].append(val)
             continue
 
-        if section == "table" and current_table:
+        if current_table and key in (
+            "标签",
+            "关键词",
+            "别名",
+            "默认排序",
+            "精简规则",
+            "列表默认",
+        ):
             tbl = config["tables"][current_table]
             if key == "标签":
                 tbl["label"] = val
@@ -104,6 +111,10 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
                 tbl["fact_alias"] = val
             elif key == "默认排序":
                 tbl["default_order_by"] = val
+            elif key == "精简规则" and val in ("是", "true", "True", "1", "yes"):
+                tbl["compact_rules"] = True
+            elif key == "列表默认" and val in ("主表", "main", "main_only"):
+                tbl["list_default_main_only"] = True
             continue
 
         if key == "展示列" and current_table:

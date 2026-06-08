@@ -39,6 +39,9 @@
 标签=生产记录表
 关键词=生产记录, 报工, 工位, WS_LOG, 开工, 完工, 是否已审核, 是否完工, 是否已过数
 别名=l
+精简规则=是
+列表默认=主表
+默认排序=l.CSTART_TIME DESC, l.CID DESC
 
 [映射 is_check]
 字段=CIS_CHECK
@@ -163,6 +166,8 @@
 展示列=l.CSTART_TIME | 开工时间
 展示列=l.CUNIT | 单位
 展示列=l.CWORK_NUMBER | 工作数量
+展示列=l.CUSTOMER_CODE | 客户编码
+展示列=l.CSCAN_BARCODE | 扫描条码
 展示列=l.CID | 主键ID
 
 [表 TBL_MO]
@@ -423,6 +428,8 @@
 标签=维修工单主表
 关键词=维修工单, 维修, 报修, EAM_REPAIR, 维修单
 别名=er
+精简规则=是
+列表默认=主表
 
 [映射 is_product]
 字段=CIS_PRODUCT
@@ -448,26 +455,26 @@
 [映射 apply_man_to_sys_user]
 字段=CAPPLY_MAN
 关联=sysus | TBL_SYS_USER | sysus.CUSER_NAME = er.CAPPLY_MAN
-列=sysus.CDISPLAY_NAME | 用户姓名
-列=sysus.CUSER_NAME | 用户账号
+列=sysus.CDISPLAY_NAME | 报修人姓名
+列=sysus.CUSER_NAME | 报修人工号
 
 [映射 assignment_man_to_sys_user]
 字段=CASSIGNMENT_MAN
 关联=sysus2 | TBL_SYS_USER | sysus2.CUSER_NAME = er.CASSIGNMENT_MAN
-列=sysus2.CDISPLAY_NAME | 用户姓名
-列=sysus2.CUSER_NAME | 用户账号
+列=sysus2.CDISPLAY_NAME | 指派人姓名
+列=sysus2.CUSER_NAME | 指派人工号
 
 [映射 audit_username_to_sys_user]
 字段=CAUDIT_USERNAME
 关联=sysus3 | TBL_SYS_USER | sysus3.CUSER_NAME = er.CAUDIT_USERNAME
-列=sysus3.CDISPLAY_NAME | 用户姓名
-列=sysus3.CUSER_NAME | 用户账号
+列=sysus3.CDISPLAY_NAME | 审核人姓名
+列=sysus3.CUSER_NAME | 审核人工号
 
 [映射 lose_man_to_sys_user]
 字段=CCLOSE_MAN
 关联=sysus4 | TBL_SYS_USER | sysus4.CUSER_NAME = er.CCLOSE_MAN
-列=sysus4.CDISPLAY_NAME | 用户姓名
-列=sysus4.CUSER_NAME | 用户账号
+列=sysus4.CDISPLAY_NAME | 关闭人姓名
+列=sysus4.CUSER_NAME | 关闭人工号
 
 [映射 error_id_to_eam_error_co]
 字段=CERROR_ID
@@ -475,17 +482,11 @@
 列=eamer.CERROR_CODE | 故障代码
 列=eamer.CERROR_NAME | 故障名称
 
-[映射 ode_to_sys_user]
-字段=CODE
-关联=sysus5 | TBL_SYS_USER | sysus5.CUSER_NAME = er.CODE
-列=sysus5.CDISPLAY_NAME | 用户姓名
-列=sysus5.CUSER_NAME | 用户账号
-
 [映射 repair_man_to_sys_user]
 字段=CREPAIR_MAN
 关联=sysus6 | TBL_SYS_USER | sysus6.CUSER_NAME = er.CREPAIR_MAN
-列=sysus6.CDISPLAY_NAME | 用户姓名
-列=sysus6.CUSER_NAME | 用户账号
+列=sysus6.CDISPLAY_NAME | 维修人姓名
+列=sysus6.CUSER_NAME | 维修人工号
 
 [映射 work_center]
 字段=CWC_ID
@@ -1109,7 +1110,6 @@
 字段=CREPAIR_ID
 关联=eamre | TBL_EAM_REPAIR | eamre.CID = eri.CREPAIR_ID
 列=eamre.CAUDIT_USERNAME | 审核/驳回人，对应TBL_SYS_USER.CUSER_NAME
-列=eamre.CODE | 用户工号，对应TBL_SYS_USER.CUSER_NAME
 列=eamre.CREPAIR_CODE | 维修单编号
 
 展示列=eri.CIMAGE_PATH | 图片路径
@@ -1123,7 +1123,6 @@
 字段=CREPAIR_ID
 关联=eamre | TBL_EAM_REPAIR | eamre.CID = erm.CREPAIR_ID
 列=eamre.CAUDIT_USERNAME | 审核/驳回人，对应TBL_SYS_USER.CUSER_NAME
-列=eamre.CODE | 用户工号，对应TBL_SYS_USER.CUSER_NAME
 列=eamre.CREPAIR_CODE | 维修单编号
 
 [映射 repair_man_code_pre_to_sys_user]
@@ -1144,7 +1143,6 @@
 字段=CREPAIR_ID
 关联=eamre | TBL_EAM_REPAIR | eamre.CID = erm.CREPAIR_ID
 列=eamre.CAUDIT_USERNAME | 审核/驳回人，对应TBL_SYS_USER.CUSER_NAME
-列=eamre.CODE | 用户工号，对应TBL_SYS_USER.CUSER_NAME
 列=eamre.CREPAIR_CODE | 维修单编号
 
 展示列=erm.CMATERIAL_NAME | 物料名称

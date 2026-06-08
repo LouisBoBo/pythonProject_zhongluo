@@ -37,7 +37,6 @@ def fix_nolock_linebreaks(sql: str) -> str:
         return sql
 
     s = sql.replace("\\n", "\n").strip()
-    s = re.sub(r"\]\s*$", "", s)  # 截断残留的 ]
 
     # FROM/JOIN dbo.TBL_xxx alias \n WITH (NOLOCK)
     pat = re.compile(
@@ -210,20 +209,55 @@ def fix_enum_display_columns(sql: str) -> str:
     return _fix_cstate_columns(out)
 
 
-def fix_mes_sql(sql: str) -> str:
+def fix_mes_sql(sql: str, user_question: str = "") -> str:
     s = fix_nolock_linebreaks(sql)
     s = fix_orphan_nolock_lines(s)
     s = fix_nolock_linebreaks(s)
     s = repair_truncated_assay_user_join(s)
     s = fix_enum_display_columns(s)
+    try:
+        from mes_sql_multijoin import fix_multijoin_top
+
+        s = fix_multijoin_top(s, user_question=user_question)
+    except ImportError:
+        pass
     return s
 
 
 def main(
     sql: Optional[str] = None,
     inputs: Optional[Dict[str, Any]] = None,
+    user_question: str = "",
     **kwargs: Any,
 ) -> Dict[str, str]:
+    merged: Dict[str, Any] = {}
+    if inputs:
+        merged.update(inputs)
+    merged.update(kwargs)
+    q = str(
+        user_question
+        or merged.get("user_question")
+        or merged.get("query")
+        or ""
+    ).strip()
     raw = _coerce_sql(sql, inputs, **kwargs)
-    fixed = fix_mes_sql(raw)
+    fixed = fix_mes_sql(raw, user_question=q)
     return {"fixed_sql": fixed, "sql": fixed}
+
+
+# --- Dify 入口（复制到 fix 代码节点；user_question 接 {{#sys.query#}} 或上游同问题）---
+try:
+    sql
+except NameError:
+    sql = ""
+try:
+    query_sql
+except NameError:
+    query_sql = ""
+try:
+    user_question
+except NameError:
+    user_question = ""
+
+_out = main(sql=sql or query_sql, user_question=user_question)
+fixed_sql = _out["fixed_sql"]
