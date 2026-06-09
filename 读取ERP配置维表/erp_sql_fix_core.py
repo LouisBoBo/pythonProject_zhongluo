@@ -4,8 +4,11 @@
 
 from __future__ import annotations
 
+import json
 import re
-from typing import List, Tuple
+from pathlib import Path
+from erp_schema_columns import get_table_columns, load_column_index_from_file, valid_column_names
+from typing import Dict, List, Tuple
 
 # LLM 高频错误写法 → 正确 string 译码（整段替换，最可靠）
 _DIRECT_PMO_REPLACEMENTS: List[Tuple[str, str]] = [
@@ -156,6 +159,39 @@ _BAD_PMO_PATTERNS: List[Tuple[re.Pattern[str], str]] = [
         _STEP_HOLD_SAFE,
     ),
 ]
+
+
+_SCHEMA_CANONICAL: Dict[str, str] | None = None
+
+
+def _schema_canonical_index() -> Dict[str, str]:
+    global _SCHEMA_CANONICAL
+    if _SCHEMA_CANONICAL is not None:
+        return _SCHEMA_CANONICAL
+    embedded = load_column_index_from_file()
+    if embedded:
+        _SCHEMA_CANONICAL = {k.upper(): k for k in embedded.keys()}
+        return _SCHEMA_CANONICAL
+    schema_path = Path(__file__).resolve().parent / "erp_table_schemas.json"
+    if schema_path.is_file():
+        data = json.loads(schema_path.read_text(encoding="utf-8"))
+        _SCHEMA_CANONICAL = {k.upper(): k for k in data.keys()}
+    else:
+        _SCHEMA_CANONICAL = {}
+    return _SCHEMA_CANONICAL
+
+
+def fix_config_key_table_names(sql: str) -> str:
+    """维表 config 大写表名（如 S_CONTRACTMATERIALS）→ 文档 canonical 名。"""
+    canon = _schema_canonical_index()
+    if not canon:
+        return sql
+
+    def _repl(m: re.Match[str]) -> str:
+        raw = m.group(1)
+        return f"dbo.{canon.get(raw.upper(), raw)}"
+
+    return re.sub(r"\bdbo\.(\w+)\b", _repl, sql, flags=re.I)
 
 
 def fix_nolock_linebreaks(sql: str) -> str:
@@ -574,7 +610,8 @@ _TABLES_WITHOUT_MODIFIED_BY = frozenset(
 
 
 def _cleanup_select_commas(sql: str) -> str:
-    out = re.sub(r"(SELECT\s+TOP\s*\(\s*\d+\s*\))\s*,", r"\1 ", sql, flags=re.I)
+    out = re.sub(r"SELECT\s*,", "SELECT ", sql, flags=re.I)
+    out = re.sub(r"(SELECT\s+TOP\s*\(\s*\d+\s*\))\s*,", r"\1 ", out, flags=re.I)
     out = re.sub(r",\s*,", ", ", out)
     out = re.sub(r",\s+FROM\b", " FROM", out, flags=re.I)
     return re.sub(r"\s{2,}", " ", out).strip()
@@ -616,6 +653,194 @@ def fix_missing_modified_by_columns(sql: str) -> str:
             flags=re.I,
         )
     return _cleanup_select_commas(out)
+
+
+# S_ContractSO 现场库无 creatorId/businessManId 等（LLM 常从 S_Contract 模板误套）
+_S_CONTRACTSO_INVALID_COLS = (
+    "businessManId",
+    "creatorId",
+    "contractDate",
+    "deliveryDate",
+    "currency",
+    "exchangeRate",
+    "totalAmount",
+    "deliveredQty",
+    "invoicedQty",
+    "status",
+    "remark",
+    "createDate",
+    "lastModifyDate",
+)
+
+
+def _contractso_aliases(sql: str) -> List[str]:
+    aliases: List[str] = []
+    for m in _TABLE_ALIAS_IN_SQL.finditer(sql):
+        if m.group("table").upper() == "S_CONTRACTSO":
+            aliases.append(m.group("alias"))
+    return aliases
+
+
+def _drop_alias_column_select(sql: str, alias: str, col: str) -> str:
+    out = sql
+    out = re.sub(
+        rf",?\s*{re.escape(alias)}\.{col}\s+AS\s+\[[^\]]+\]",
+        "",
+        out,
+        flags=re.I,
+    )
+    out = re.sub(
+        rf",?\s*\[[^\]]+\]\s*=\s*{re.escape(alias)}\.{col}\b",
+        "",
+        out,
+        flags=re.I,
+    )
+    return out
+
+
+def fix_s_contractso_invalid_columns(sql: str, user_question: str = "") -> str:
+    """S_ContractSO 无 businessManId/creatorId 等，误 JOIN T_User 会 error 207。"""
+    if not re.search(r"dbo\.S_ContractSO\b", sql, re.I):
+        return sql
+    out = sql
+    for alias in _contractso_aliases(out):
+        for col in _S_CONTRACTSO_INVALID_COLS:
+            out = _drop_alias_column_select(out, alias, col)
+        out = re.sub(
+            r"(?:LEFT|INNER|RIGHT)\s+JOIN\s+dbo\.T_User\s+(?P<tu>\w+)"
+            rf"(?:\s+WITH\s*\(\s*NOLOCK\s*\))?\s+ON\s+(?P=tu)\.recId\s*=\s*"
+            rf"{re.escape(alias)}\.(?:businessManId|creatorId)\b",
+            "",
+            out,
+            flags=re.I,
+        )
+        for tu_pat in (
+            r",?\s*(?P<tu>\w+)\.employeeName\s+AS\s+\[(?:业务员名称|创建人名称)\]",
+            r",?\s*(?P<tu>\w+)\.loginName\s+AS\s+\[(?:业务员账号|创建人账号)\]",
+            r",?\s*\[(?:业务员名称|创建人名称)\]\s*=\s*(?P<tu>\w+)\.employeeName\b",
+            r",?\s*\[(?:业务员账号|创建人账号)\]\s*=\s*(?P<tu>\w+)\.loginName\b",
+        ):
+            out = re.sub(tu_pat, "", out, flags=re.I)
+        out = re.sub(
+            rf",?\s*{re.escape(alias)}\.exchangeRate\s+AS\s+\[[^\]]+\]",
+            rf", {alias}.exchRate AS [汇率]",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf",?\s*\[[^\]]+\]\s*=\s*{re.escape(alias)}\.exchangeRate\b",
+            rf", [汇率] = {alias}.exchRate",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf",?\s*{re.escape(alias)}\.remark\s+AS\s+\[[^\]]+\]",
+            rf", {alias}.note AS [备注]",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf",?\s*\[[^\]]+\]\s*=\s*{re.escape(alias)}\.remark\b",
+            rf", [备注] = {alias}.note",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf",?\s*{re.escape(alias)}\.totalAmount\s+AS\s+\[[^\]]+\]",
+            rf", {alias}.subAmount AS [总金额]",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf",?\s*\[[^\]]+\]\s*=\s*{re.escape(alias)}\.totalAmount\b",
+            rf", [总金额] = {alias}.subAmount",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf"ORDER\s+BY\s+{re.escape(alias)}\.createDate\b",
+            f"ORDER BY {alias}.recId",
+            out,
+            flags=re.I,
+        )
+        out = re.sub(
+            rf"ORDER\s+BY\s+{re.escape(alias)}\.lastModifyDate\b",
+            f"ORDER BY {alias}.recId",
+            out,
+            flags=re.I,
+        )
+    q = (user_question or "").strip()
+    if q and any(k in q for k in ("材料销售", "材料贸易", "贸易销售")):
+        if not re.search(r"dbo\.S_ContractMaterials\b", out, re.I):
+            out = re.sub(
+                r"(?:LEFT|INNER|RIGHT)\s+JOIN\s+dbo\.S_ContractItem\s+\w+"
+                r"(?:\s+WITH\s*\(\s*NOLOCK\s*\))?\s+ON\s+[^\n]+?(?=\s+(?:LEFT|INNER|RIGHT|ORDER|WHERE|GROUP|HAVING|$))",
+                " ",
+                out,
+                flags=re.I,
+            )
+            out = re.sub(
+                r"(?:LEFT|INNER|RIGHT)\s+JOIN\s+dbo\.M_Materials\s+\w+"
+                r"(?:\s+WITH\s*\(\s*NOLOCK\s*\))?\s+ON\s+\w+\.code\s*=\s*\w+\.materialCode\b",
+                " ",
+                out,
+                flags=re.I,
+            )
+            out = re.sub(
+                r"(?:LEFT|INNER|RIGHT)\s+JOIN\s+dbo\.T_Unit\s+\w+"
+                r"(?:\s+WITH\s*\(\s*NOLOCK\s*\))?\s+ON\s+\w+\.recId\s*=\s*\w+\.unitId\b",
+                " ",
+                out,
+                flags=re.I,
+            )
+            for prefix in ("sci", "mat", "tu2"):
+                out = re.sub(
+                    rf",?\s*\[[^\]]+\]\s*=\s*{prefix}\.[\w\[\]]+",
+                    "",
+                    out,
+                    flags=re.I,
+                )
+                out = re.sub(
+                    rf",?\s*{prefix}\.[\w\[\]]+\s+AS\s+\[[^\]]+\]",
+                    "",
+                    out,
+                    flags=re.I,
+                )
+    return _cleanup_select_commas(out)
+
+
+_MATERIAL_SALES_LIST_SQL = (
+    "SELECT TOP (1000) "
+    "scm.soNumber AS [销售订单号], "
+    "scontr.custContractNumber AS [客户合同单号], "
+    "mm.code AS [物料代码], "
+    "mm.name AS [物料名称], "
+    "scm.qtyOrdered AS [订单数], "
+    "scm.priceInTax AS [含税单价], "
+    "scm.priceNoTax AS [不含税单价], "
+    "scm.totalInTax AS [含税总金额], "
+    "scm.totalNoTax AS [不含税总金额], "
+    "scm.requestDate AS [需求日期], "
+    "scm.note AS [备注] "
+    "FROM dbo.S_ContractMaterials scm WITH (NOLOCK) "
+    "LEFT JOIN dbo.S_Contract scontr WITH (NOLOCK) ON scontr.recId = scm.contractId "
+    "LEFT JOIN dbo.M_Materials mm WITH (NOLOCK) ON mm.recId = scm.materialsId "
+    "ORDER BY scm.requestDate DESC, scm.recId DESC"
+)
+
+
+def fix_material_sales_wrong_fact_table(sql: str, user_question: str = "") -> str:
+    """问材料销售却 FROM S_ContractSO 时，列表查询改查 S_ContractMaterials。"""
+    q = (user_question or "").strip()
+    if not q or not any(k in q for k in ("材料销售", "材料贸易", "贸易销售")):
+        return sql
+    if re.search(r"dbo\.S_ContractMaterials\b", sql, re.I):
+        return sql
+    if not re.search(r"dbo\.S_ContractSO\b", sql, re.I):
+        return sql
+    if re.search(r"\bWHERE\b", sql, re.I):
+        return sql
+    return _MATERIAL_SALES_LIST_SQL
 
 
 def fix_p_wo_invalid_columns(sql: str) -> str:
@@ -662,8 +887,182 @@ def fix_hallucinated_column_names(sql: str) -> str:
     return out
 
 
-def fix_erp_sql(sql: str) -> str:
-    s = fix_nolock_linebreaks(sql)
+def _parse_primary_from(sql: str) -> tuple[str, str] | None:
+    m = re.search(
+        r"FROM\s+dbo\.(\w+)\s+(\w+)(?:\s+WITH\s*\(\s*NOLOCK\s*\))?",
+        sql,
+        re.I,
+    )
+    if not m:
+        return None
+    return m.group(1), m.group(2)
+
+
+def fix_invalid_fact_table_columns(sql: str) -> str:
+    """去掉各表别名上 schema 不存在的列，避免 error 207。"""
+    out = sql
+    seen: set[tuple[str, str]] = set()
+    for m in re.finditer(
+        r"(?:FROM|(?:LEFT|INNER|RIGHT)\s+JOIN)\s+dbo\.(\w+)\s+(\w+)"
+        r"(?:\s+WITH\s*\(\s*NOLOCK\s*\))?",
+        sql,
+        re.I,
+    ):
+        table, alias = m.group(1), m.group(2)
+        key = (table.upper(), alias.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        valid = valid_column_names(table)
+        if not valid:
+            continue
+        pat = re.compile(
+            rf",?\s*{re.escape(alias)}\.(?P<col>\w+)\s+AS\s+\[[^\]]+\]",
+            re.I,
+        )
+
+        def _drop_bad(col_match: re.Match[str], _valid: set[str] = valid) -> str:
+            if col_match.group("col").upper() in _valid:
+                return col_match.group(0)
+            return ""
+
+        out = pat.sub(_drop_bad, out)
+    return _cleanup_select_commas(out)
+
+
+_OUTSOURCE_PO_LIST_SQL = (
+    "SELECT TOP (1000) "
+    "sosp.os_PO_Number AS [外发单号], "
+    "msu.name AS [供应商名称], "
+    "CASE UPPER(RTRIM(sosp.status)) WHEN 'ACTIVE' THEN N'制作中' WHEN 'VALID' THEN N'生效(审批通过)' "
+    "WHEN 'ONHOLD' THEN N'暂缓' WHEN 'CANCEL' THEN N'取消' WHEN 'CLOSE' THEN N'关闭' "
+    "WHEN 'VOID' THEN N'失效' ELSE sosp.status END AS [单据状态], "
+    "CASE UPPER(RTRIM(sosp.type)) WHEN 'SO' THEN N'订单外协' WHEN 'WO' THEN N'工单外协' ELSE sosp.type END AS [类型], "
+    "tu.loginName AS [制单人], "
+    "sosp.createDate AS [建单日期], "
+    "sospi.qty AS [采购数量], "
+    "sospi.priceInTax AS [含税单价], "
+    "sospi.toTalAmount AS [总金额], "
+    "sospi.itemNote AS [备注] "
+    "FROM dbo.S_OS_PO sosp WITH (NOLOCK) "
+    "LEFT JOIN dbo.M_Suppliers msu WITH (NOLOCK) ON msu.recId = sosp.suppliersId "
+    "LEFT JOIN dbo.T_User tu WITH (NOLOCK) ON tu.recId = sosp.creatorId "
+    "LEFT JOIN dbo.S_OS_POItem sospi WITH (NOLOCK) ON sospi.os_PO_Id = sosp.recId "
+    "ORDER BY sosp.createDate DESC, sosp.recId DESC, sospi.recId ASC"
+)
+
+_PURCHASE_ORDER_ITEM_LIST_SQL = (
+    "SELECT TOP (1000) "
+    "mpur.FGI_Inventory AS [主键], "
+    "mm.code AS [物料代码], "
+    "mm.name AS [物料名称], "
+    "mpur.qtyOrdered AS [采购数量], "
+    "mpur.qtyRecieved AS [接收数量], "
+    "mpur.priceInTax AS [含税单价], "
+    "mpur.totalInTax AS [含税金额], "
+    "mpur.requestDate AS [需求日期], "
+    "mpur.itemNotes AS [备注], "
+    "tw.name AS [仓库名称] "
+    "FROM dbo.M_PurchaseOrderItem mpur WITH (NOLOCK) "
+    "LEFT JOIN dbo.M_Materials mm WITH (NOLOCK) ON mm.recId = mpur.materialsId "
+    "LEFT JOIN dbo.T_Warehouse tw WITH (NOLOCK) ON tw.recId = mpur.warehouseId "
+    "ORDER BY mpur.requestDate DESC, mpur.FGI_Inventory DESC"
+)
+
+
+def _m_purchase_order_header_misused(sql: str) -> bool:
+    """M_PurchaseOrder 无字段字典，除 recId 外均为 LLM 编造。"""
+    if not re.search(r"dbo\.M_PurchaseOrder\b", sql, re.I):
+        return False
+    for m in re.finditer(
+        r"(?:FROM|(?:LEFT|INNER|RIGHT)\s+JOIN)\s+dbo\.M_PurchaseOrder\s+(\w+)",
+        sql,
+        re.I,
+    ):
+        alias = m.group(1)
+        for ref in re.finditer(
+            rf"\b{re.escape(alias)}\.\[?(?P<col>\w+)\]?",
+            sql,
+            re.I,
+        ):
+            if ref.group("col").upper() != "RECID":
+                return True
+    return False
+
+
+def _is_outsource_purchase_context(sql: str, user_question: str = "") -> bool:
+    q = (user_question or "").strip()
+    if any(k in q for k in ("外协采购单", "外协采购", "外协", "工单外协", "订单外协")):
+        return True
+    if re.search(r"\bpurchaseType\b", sql, re.I) and re.search(
+        r"OUTSOURCE", sql, re.I
+    ):
+        return True
+    if re.search(r"dbo\.M_PurchaseOrder\b", sql, re.I) and re.search(
+        r"OUTSOURCE", sql, re.I
+    ):
+        return True
+    return False
+
+
+def fix_m_purchase_order_hallucinated_sql(sql: str, user_question: str = "") -> str:
+    """M_PurchaseOrder 无字段字典时 LLM 编造 supplierId 等 → 改查 S_OS_PO 或 M_PurchaseOrderItem。"""
+    if not _m_purchase_order_header_misused(sql):
+        return sql
+    if _is_outsource_purchase_context(sql, user_question=user_question):
+        return _OUTSOURCE_PO_LIST_SQL
+    return _PURCHASE_ORDER_ITEM_LIST_SQL
+
+
+def fix_m_purchase_order_item_column_names(sql: str) -> str:
+    """采购明细常见编造列名 → 文档真实列名。"""
+    if not re.search(r"dbo\.M_PurchaseOrderItem\b", sql, re.I):
+        return sql
+    subs = (
+        (r"\b(?P<a>\w+)\.quantity\b", r"\g<a>.qtyOrdered"),
+        (r"\b(?P<a>\w+)\.receivedQty\b", r"\g<a>.qtyRecieved"),
+        (r"\b(?P<a>\w+)\.unreceivedQty\b", r"\g<a>.qtyToStock"),
+        (r"\b(?P<a>\w+)\.unitPrice\b", r"\g<a>.priceInTax"),
+        (r"\b(?P<a>\w+)\.amount\b", r"\g<a>.totalInTax"),
+        (r"\b(?P<a>\w+)\.remark\b", r"\g<a>.itemNotes"),
+    )
+    out = sql
+    for pat, repl in subs:
+        out = re.sub(pat, repl, out, flags=re.I)
+    return out
+
+
+def fix_enum_display_columns(sql: str, user_question: str = "") -> str:
+    """维表映射兜底：裸 enum 列 → CASE 译码（.map 已配置但 LLM 常仍输出裸字段）。"""
+    fn = globals().get("apply_sql_display_rewrites")
+    if fn is None:
+        try:
+            from erp_dimension_rules import apply_sql_display_rewrites as fn
+        except ImportError:
+            fn = None
+    if fn is None:
+        return sql
+    fact = ""
+    infer_fn = globals().get("infer_fact_table")
+    if infer_fn is None:
+        try:
+            from erp_dimension_rules import infer_fact_table as infer_fn
+        except ImportError:
+            infer_fn = None
+    if infer_fn and (user_question or "").strip():
+        try:
+            fact = infer_fn(user_question)
+        except Exception:
+            fact = ""
+    try:
+        return fn(sql, fact_table=fact)
+    except Exception:
+        return sql
+
+
+def fix_erp_sql(sql: str, user_question: str = "") -> str:
+    s = fix_config_key_table_names(sql)
+    s = fix_nolock_linebreaks(s)
     s = fix_orphan_nolock_lines(s)
     s = fix_nolock_linebreaks(s)
     s = fix_pmo_string_enum_cases(s)
@@ -673,6 +1072,10 @@ def fix_erp_sql(sql: str) -> str:
     s = fix_raw_bool_selects(s)
     s = fix_string_modified_by_join(s)
     s = fix_hallucinated_column_names(s)
+    s = fix_m_purchase_order_item_column_names(s)
+    s = fix_m_purchase_order_hallucinated_sql(s, user_question=user_question)
+    s = fix_invalid_fact_table_columns(s)
+    s = fix_s_contractso_invalid_columns(s, user_question=user_question)
     s = fix_p_wo_invalid_columns(s)
     s = fix_missing_modified_by_columns(s)
     s = fix_invalid_businessman_join(s)
@@ -681,6 +1084,16 @@ def fix_erp_sql(sql: str) -> str:
     s = fix_salespartnum_or_recid(s)
     s = fix_inner_join_salesparts_layers(s)
     s = fix_sosw_plant_supplier_join(s)
+    fn = globals().get("fix_multijoin_top")
+    if fn is None:
+        try:
+            from erp_sql_multijoin import fix_multijoin_top as fn
+        except ImportError:
+            fn = None
+    if fn is not None:
+        s = fn(s, user_question=user_question)
+    s = fix_material_sales_wrong_fact_table(s, user_question=user_question)
+    s = fix_enum_display_columns(s, user_question=user_question)
     return s
 
 
@@ -725,7 +1138,8 @@ def fix_erp_sql_with_meta(sql: str = "", query_sql: str = "", **kwargs) -> dict[
             "was_changed": "false",
             "fix_error": "未收到 SQL：修复节点入参须接 LLM 的 query_sql/sql",
         }
-    fixed = fix_erp_sql(raw)
+    q = str(kwargs.get("user_question") or kwargs.get("query") or "").strip()
+    fixed = fix_erp_sql(raw, user_question=q)
     changed = fixed != raw
     return {
         "fixed_sql": fixed,

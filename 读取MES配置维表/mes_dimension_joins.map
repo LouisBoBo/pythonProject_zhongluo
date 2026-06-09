@@ -174,7 +174,9 @@
 标签=工单信息表
 关键词=工单, 生产工单, MO_LOT, 批次
 别名=mo
-默认排序=mo.CPLAN_START_TIME DESC
+精简规则=是
+列表默认=主表
+默认排序=mo.CPLAN_START_TIME DESC, mo.CID DESC
 
 [映射 status]
 字段=CSTATUS
@@ -290,6 +292,8 @@
 标签=检验记录主表
 关键词=检验记录, IPQC, FQC, 品质检验
 别名=qir
+精简规则=是
+列表默认=主表
 默认排序=COALESCE(qir.CINSPECT_TIME, qir.CCHECK_TIME, qir.CLAB_INSPECT_TIME) DESC, qir.CID DESC
 
 [映射 decision_mode]
@@ -888,8 +892,11 @@
 
 [表 TBL_EAM_MAINTAIN_TASK]
 标签=保养任务主表
-关键词=保养任务主表
+关键词=保养任务, 保养, 保养任务主表, EAM_MAINTAIN
 别名=emt
+精简规则=是
+列表默认=主表
+默认排序=emt.CTASK_CREATED_TIME DESC, emt.CID DESC
 
 [映射 task_status]
 字段=CTASK_STATUS
@@ -3053,6 +3060,7 @@
 标签=工单与条码生产关联表
 关键词=工单与条码生产关联表,工单与条码,条码生产关联
 别名=mbp
+精简规则=是
 
 [映射 barcode_id_to_wms_item_bar]
 字段=CBARCODE_ID
@@ -3598,6 +3606,7 @@
 标签=化验任务记录表
 关键词=化验任务记录表,化验任务记录,化验任务,药水化验
 别名=qal
+精简规则=是
 默认排序=COALESCE(qal.CASSAY_TIME, qal.CSAMPLE_TIME, qal.CRECEIVE_TIME, qal.CTASK_STAND_TIME_S) DESC, qal.CID DESC
 
 [映射 assay_result]
@@ -5002,6 +5011,9 @@
 标签=采购单
 关键词=采购单, 采购订单, PO, SRM采购
 别名=sp
+精简规则=是
+列表默认=主表
+默认排序=sp.CPURCHASE_DATE DESC, sp.CID DESC
 说明=用户问采购单/采购订单列表或按年统计（问句无「明细/详情/行项目」）时事实表为本表，日期过滤用 CPURCHASE_DATE；「采购订单」与「采购单」同义
 
 [映射 supplier]
@@ -5064,6 +5076,7 @@
 标签=采购订单明细
 关键词=采购订单明细, 采购单明细, 采购明细, PO明细, 采购订单行
 别名=spd
+精简规则=是
 说明=用户问某 PO/POA 单号+明细/详情且未点名只要某几列时，SELECT 须包含本表全部展示列及下方各映射必须列，禁止只选 6 列左右子集
 
 [映射 item]
@@ -5106,6 +5119,8 @@
 标签=收货单主表
 关键词=收货单主表,收货单,查询收货单
 别名=sr
+精简规则=是
+列表默认=主表
 默认排序=sr.CRECEIVING_DATE DESC, sr.CID DESC
 
 [映射 status]
@@ -5276,9 +5291,11 @@
 
 [表 TBL_SYS_USER]
 标签=系统用户表
-关键词=系统用户表,系统用户,用户表,用户列表
+关键词=系统用户, 用户表, 用户列表, 用户明细, 用户信息, 查询用户
 别名=su
-默认排序=su.CDATETIME_LAST_LOGIN DESC
+精简规则=是
+列表默认=主表
+默认排序=su.CDATETIME_LAST_LOGIN DESC, su.CID DESC
 
 [映射 org_code_to_sys_organiza]
 字段=CORG_CODE
@@ -5309,6 +5326,15 @@
 禁止=su.CSTATE AS [状态]
 禁止=su.CSTATE AS [状态中文]
 禁止=CASE UPPER(RTRIM(su.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE su.CSTATE END AS [状态中文]
+
+[映射 user_role]
+字段=CID
+可选=是
+说明=用户问角色时 JOIN；一用户多角色按 su.CID, r.CID 多行
+关联=urm | TBL_SYS_USER_ROLE_MAP | urm.CUSER_ID = su.CID
+关联=r | TBL_SYS_ROLE | r.CID = urm.CROLE_ID | 依赖=urm
+列=r.CROLE_CODE | 角色编码
+列=r.CROLE_NAME | 角色名称
 
 展示列=su.CCUR_HOST | 当前登录主机
 展示列=su.CDATETIME_LAST_LOCKED_OUT | 最后锁定时间
@@ -5583,7 +5609,9 @@
 标签=尾数仓操作记录
 关键词=尾数仓操作记录,尾数仓
 别名=wmr
-默认排序=COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC
+精简规则=是
+列表默认=主表
+默认排序=COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC, wmr.CID DESC
 
 [映射 status]
 字段=CSTATUS
@@ -5652,6 +5680,7 @@
 标签=领料记录明细
 关键词=领料记录明细,领料明细,领料人记录明细
 别名=wpld
+精简规则=是
 
 [映射 barcode_id_to_wms_item_bar]
 字段=CBARCODE_ID

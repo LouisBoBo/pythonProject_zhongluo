@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-从《中络项目MES 系统数据库表结构V1.2.md》生成表结构索引，并打包为 Dify 代码节点：
+从《中络项目ERP 系统数据库表结构V1.0.md》生成表结构索引，并打包为 Dify 代码节点：
 
-  python3 build_mes_schema_bundle.py
+  python3 build_erp_schema_bundle.py
 
 维护：
   1. 改表结构 .md
   2. 运行本脚本
-  3. 复制 dify_mes_schema_by_tables.py 到 Dify 代码节点
+  3. 复制 dify_erp_schema_by_tables.py 到 Dify 代码节点
 """
 
 from __future__ import annotations
@@ -16,24 +16,25 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mes_schema_by_tables import parse_schema_markdown
+from erp_schema_by_tables import parse_schema_markdown
 
 ROOT = Path(__file__).resolve().parent
-MD_FILE = ROOT.parent / "中络项目MES 系统数据库表结构V1.2.md"
-JSON_FILE = ROOT / "mes_table_schemas.json"
-OUT = ROOT / "dify_mes_schema_by_tables.py"
+MD_FILE = ROOT.parent / "中络项目ERP 系统数据库表结构V1.0.md"
+JSON_FILE = ROOT / "erp_table_schemas.json"
+OUT = ROOT / "dify_erp_schema_by_tables.py"
 
 HEADER = '''# -*- coding: utf-8 -*-
-# 【Dify 代码节点专用 · 由 build_mes_schema_bundle.py 自动生成，请勿手改】
-# 维护：改 中络项目MES 系统数据库表结构V1.2.md → python3 build_mes_schema_bundle.py → 复制到 Dify
+# 【Dify 代码节点专用 · 由 build_erp_schema_bundle.py 自动生成，请勿手改】
+# 维护：改 中络项目ERP 系统数据库表结构V1.0.md → python3 build_erp_schema_bundle.py → 复制到 Dify
 #
 # 作用：按选表结果直接拼【参考表结构】，替代「每张表循环知识库检索」，毫秒级完成。
 #
-# 入参（当前线上：tables_json；调序后可接维表 fact_table + join_tables）：
-#   tables_json — 选表 LLM JSON（**当前 workflow：schema 在维表前，用此入参**）
-#   fact_table / join_tables — 维表节点出参（**须 workflow 改为 维表→schema 后才可接线**）
+# 入参（任选其一，推荐 tables_json）：
+#   tables — 上游表名数组
+#   tables_json — 选表 LLM JSON 字符串（按 score 取 Top max_tables，默认 8）
 #   table_names — 逗号/空格分隔表名
-#   max_tables — 仅 fact_table/join_tables 路径生效（默认 8）
+#   fact_table / join_tables — 来自维表节点时优先用（最小 schema 集，推荐 workflow 维表在 schema 前）
+#   max_tables — 最多拼接表数（默认 8）
 # 出参：
 #   context, table_count, found_tables, missing_tables
 
@@ -93,7 +94,7 @@ def main() -> None:
     )
     print(f"已生成 {JSON_FILE.name}（{len(index)} 张表，{JSON_FILE.stat().st_size} 字节）")
 
-    core = (ROOT / "mes_schema_by_tables.py").read_text(encoding="utf-8")
+    core = (ROOT / "erp_schema_by_tables.py").read_text(encoding="utf-8")
     lines = core.splitlines()
     if lines and lines[0].startswith("#!"):
         lines = lines[1:]
@@ -102,19 +103,13 @@ def main() -> None:
     embedded = f'_EMBEDDED_SCHEMAS = json.loads({json.dumps(json.dumps(index, ensure_ascii=False))})\n'
     marker = "_EMBEDDED_SCHEMAS: Optional[Dict[str, str]] = None"
     if marker not in core:
-        raise SystemExit(f"未在 mes_schema_by_tables.py 中找到 {marker!r}")
+        raise SystemExit(f"未在 erp_schema_by_tables.py 中找到 {marker!r}")
 
     core = core.replace(marker, embedded.rstrip(), 1)
 
-    # 去掉本地 CLI
-    cli_marker = 'if __name__ == "__main__":'
-    idx = core.rfind(cli_marker)
-    if idx != -1:
-        core = core[:idx].rstrip() + "\n"
-
     OUT.write_text(HEADER + core + "\n\n" + DIFY_ENTRY, encoding="utf-8")
     print(f"已生成 {OUT.name}（{OUT.stat().st_size} 字节）")
-    print("请复制 dify_mes_schema_by_tables.py 全文到 Dify「代码」节点。")
+    print("请复制 dify_erp_schema_by_tables.py 全文到 Dify「代码」节点。")
 
 
 if __name__ == "__main__":

@@ -55,7 +55,8 @@
 - **请购单**（`M_Requisitions`）：「请购单」→ **`M_Requisitions`**；`status` 为 **string**（Valid/Active 等），**禁止**数字 CASE；
 - **MRB 送检申请**（`P_MRBRequisition`）：问「MRB」「MRB送检」「送检申请」时，事实表 **`P_MRBRequisition`**（别名常为 `pmrb`）；**必须** JOIN `T_User`（`fixedById`/`sendById`）、`P_MORoute`（`prd_MO_RoutesId`）、`T_Unit`（`unitId`）、`P_WO`（`woId`）；`pmrb.status` 为 **int?**（0 待检、1 完成）；排序默认 **`pmrb.sendDate DESC`**；
 - **工单过数**（`P_OutPut`）：问「过数」「产出」「工单过数记录」时，事实表 **`P_OutPut`**（别名常为 `pout`）；JOIN **`P_MO pmo`** 时 **`pmo.status`/`pmo.synchro`/`pmo.dev` 必须 string CASE**（见上方译码规则），**禁止** `CASE pmo.status WHEN 1…`（会 error 245，值如 `'Order'`）；
-- **销售合同/出货**（`S_ContractSO`/`S_ContractItem`）：按问句选主表或明细表，单号过滤用文档中真实单号列（如 `soNumber`）。
+- **材料销售订单（贸易）**（`S_ContractMaterials`）：问「材料销售订单」「材料销售」「贸易销售」时，事实表 **`S_ContractMaterials`**（别名常为 `scm`/`scon`），**禁止**用 `S_ContractSO`+`S_ContractItem` 模板；**无** `businessManId`/`creatorId`/`contractDate`/`deliveryDate`/`currency`/`status`/`remark`/`createDate`/`lastModifyDate`；客户/税率等经 **`LEFT JOIN dbo.S_Contract scontr … ON scontr.recId = scm.contractId`**；物料经 **`M_Materials mm ON mm.recId = scm.materialsId`**；单号列 **`soNumber`**；排序默认 **`scm.requestDate DESC`** 或 **`scm.recId DESC`**；
+- **销售订单表**（`S_ContractSO`）：问「销售订单表」「制造销售订单」等时用 **`S_ContractSO`**；**无** `businessManId`/`creatorId`/`contractDate`/`deliveryDate`/`currency`/`exchangeRate`/`totalAmount`/`deliveredQty`/`status`/`remark`/`createDate`/`lastModifyDate`（汇率用 **`exchRate`**，备注用 **`note`**，金额用 **`subAmount`/`amount`**，审核用 **`ifReceive`**）；单号 **`soNumber`**；**禁止**臆造 `S_ContractItem` 明细列（该表片段常无字段明细）。
 
 
 
@@ -90,8 +91,10 @@
 
 
 **明细列全集（用户未点名只要某几列时）**：
-- 问「××明细/详情/列表」且用户未指定列时，`SELECT` 须包含【维表映射规则】中该事实表的**全部「事实表本表列」**与各映射**必须列**；**禁止**只输出 6~10 列子集；
-- **禁止裸外键**：不得 `spd.materialsId AS [物料ID]`；物料须 JOIN **`M_Materials`** 输出 `[料号]`/`[品名]` 等。
+- 以【维表映射规则】为准，分两种模式：
+  - **列表默认**：`SELECT` 须包含 §本表列 中**全部字段**（=【参考表结构】该表 schema **完整列清单**，一条不能少），**禁止**只输出 BOM数量 等单列；此模式**不要** JOIN 维表；
+  - **明细/详情/全部字段** 或用户点名维表语义：须 JOIN 并输出规则 **§按需 JOIN / 维表列** 中的列；
+- **禁止裸外键**（仅适用于已 JOIN 维表时）：不得只输出 `materialsId AS [物料ID]` 而不 JOIN `M_Materials` 取名称；列表默认模式下可输出外键列本身。
 
 
 
@@ -135,7 +138,7 @@
 **【上一次报错】修复（若不为空则必做）**：
 - 若含 **error 245** 且 **`'Order'`** / **converting the nvarchar … to … int**：**必须**把 SQL 中所有 `CASE pmo.status WHEN 1 THEN N'外协'…`（及 `mo.status` 同款）**整段替换**为 string CASE（见上方「正确示例」）；**同步检查** `pmo.synchro`/`pmo.dev` 是否误用 `WHEN 0`/`WHEN 1` 数字分支；
 - 若含 **error 245** 且 **`'系统管理员'`** 等中文用户名：多为 **`modifiedBy` 误 JOIN `T_User.recId`**；**删除该 JOIN**，改为 **`事实表.modifiedBy AS [修改人]`**；
-- 若含 **error 207** 且 **`businessManId`** / **`businessManName`**：查客诉等表是否误 JOIN `S_BusinessMan`（`S_Complainment` **无** `businessManId`）；雇员列应为 `bm.name`/`bm.telephone`/`bm.email`；用户列为 `tu.loginName`/`tu.employeeName`，禁止 `userName`/`realName`；
+- 若含 **error 207** 且 **`businessManId`** / **`businessManName`**：① **`S_ContractSO`/`S_ContractMaterials` 均无 `businessManId`**，删除 `tu.recId = soc.businessManId` 及业务员 SELECT；② 问「材料销售订单」须改事实表为 **`S_ContractMaterials`**，勿用 `S_ContractSO`；③ 客诉表 `S_Complainment` **无** `businessManId`，勿 JOIN `S_BusinessMan`；雇员列应为 `bm.name`/`bm.telephone`/`bm.email`；用户列为 `tu.loginName`/`tu.employeeName`，禁止 `userName`/`realName`；
 - 若含 **error 207** / **Invalid column name**：① 从报错信息提取**无效列名**（如 `'partnum'`）；② 在 SQL 中定位 `别名.列名`；③ 查【参考表结构】**该别名对应表**的小节——**无此列则删除该 SELECT 项**，或改用该表/关联表文档中**明确存在**的列；④ **禁止**仅改大小写瞎试（如 `partnum`↔`partNum`），除非目标表小节中**逐字出现**该写法；
   - **`partnum`/`partNum` on `P_WO`**：删除 `pwo.partnum`/`pwo.partNum`；若已 JOIN `P_MORoute pmorou`，追加 **`E_JobMfgParts ejmp`**（`ON ejmp.recId = pmorou.mfgPartId`），改 **`ejmp.partNum AS [制造部件编码]`**；
 - 若含 **error 102/156/208**：检查表名、方括号别名、`WITH (NOLOCK)` 是否拆行；
@@ -194,13 +197,34 @@
 
 维护：`erp_dimension_joins.map` 改完后运行 `python3 build_dify_bundle.py`，分别复制两个 `.py` 到 Dify。
 
-**相对时间**：在 SQL 生成 LLM 前增加代码节点（复制 **`读取MES配置维表/dify_current_datetime.py`**），出参 `current_datetime`（北京时间，**无需入参**）→ 提示词。**禁止**用内置「获取当前时间」工具（UTC，差 8 小时）。
+**相对时间**：在 SQL 生成 LLM 前增加代码节点（复制 **`读取ERP配置维表/dify_current_datetime.py`**），出参 `current_datetime`（北京时间，**无需入参**）→ 提示词。**禁止**用内置「获取当前时间」工具（UTC，差 8 小时）。
+
+**约束规则接线（两层，勿混用）**：
+
+| 层级 | 时机 | 来源 | 提示词占位 | 作用 |
+|------|------|------|------------|------|
+| **规则约束** | **循环外**（每次对话读一次） | `dify_erp_sql_rules_db_read.py` → `rule_list` | `{{#读取SQL约束规则.rule_list#}}` | PostgreSQL `erp_sql_rules` 表已积累的 **learned** 规则 |
+| **新增约束规则** | **循环内**（每次 SQL 报错后） | 报错提取节点 → 写入 `conversation.add_rules` | `{{#conversation.add_rules#}}` | **本轮重试**即时生效的报错规则，供 LLM 修正 SQL |
+
+**循环内链路（SQL 报错 → 学习 → 重试）**：
+```
+text2data 报错
+  → tiqu_error_rule 提取 rule_text
+  → 更新 conversation.add_rules（循环内 LLM 立即读）
+  → dify_erp_sql_rules_db_write.py 写入 erp_sql_rules（跨会话持久化，供下次 rule_list 读取）
+  → 回到 SQL 生成 LLM（带 add_rules + 上一次SQL/报错）
+```
+
+**说明**：
+- **基础约束**在 `中络项目ERP SQL约束规则提示词.md` 或本提示词正文，**不**由 DB 读节点返回（避免与 SYSTEM 重复占 token）。
+- `rule_list` 为空：正常（尚未 seed learned 或无历史报错）；仍可用 base 约束 + 本轮 `add_rules`。
+- **勿**把 `rule_list` 改成 `conversation.rule_list`；DB 读节点在循环外，会话变量 `add_rules` 只在循环内更新。
 
 
 
 【参考表结构】{{#context#}}
 【用户问题】{{#1776736092059.text#}}
-【规则约束】{{#conversation.rule_list#}}
+【规则约束】{{#读取SQL约束规则.rule_list#}}
 【新增约束规则】{{#conversation.add_rules#}}
 【维表映射规则】{{#1779246683902.query_rules#}}
 【当前系统时间】{{#current_datetime#}}

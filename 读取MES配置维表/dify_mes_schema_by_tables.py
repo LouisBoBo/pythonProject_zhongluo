@@ -4,10 +4,11 @@
 #
 # 作用：按选表结果直接拼【参考表结构】，替代「每张表循环知识库检索」，毫秒级完成。
 #
-# 入参（任选其一，推荐 tables）：
-#   tables — 上游表名数组，如 ["TBL_EAM_REPAIR","TBL_BD_WC"]（Dify array 或 JSON 数组字符串）
-#   tables_json — 选表 JSON 字符串，如 {"tables":["TBL_EAM_REPAIR"]} 或 [{"table_name":"TBL_XXX"}]
-#   table_names — 逗号/空格分隔表名，如 TBL_EAM_REPAIR,TBL_BD_WC
+# 入参（当前线上：tables_json；调序后可接维表 fact_table + join_tables）：
+#   tables_json — 选表 LLM JSON（**当前 workflow：schema 在维表前，用此入参**）
+#   fact_table / join_tables — 维表节点出参（**须 workflow 改为 维表→schema 后才可接线**）
+#   table_names — 逗号/空格分隔表名
+#   max_tables — 仅 fact_table/join_tables 路径生效（默认 8）
 # 出参：
 #   context, table_count, found_tables, missing_tables
 
@@ -19,7 +20,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 _TABLE_HEADER_RE = re.compile(
     r"^#### \d+ (.+?) \( (TBL_\w+) \)\s*$",
@@ -171,11 +172,117 @@ def slim_schema_section(
         return text
     idx = text.find(_RELATIONS_MARKER)
     if idx == -1:
+        idx = text.find("-关联关系")
+    if idx == -1:
         return text
     trimmed = text[:idx].rstrip()
     if not trimmed.endswith("---"):
         trimmed += "\n\n---"
     return trimmed
+
+
+def _score_llm_tables(raw: Any) -> List[Tuple[str, int]]:
+    """从选表 LLM JSON 提取 (表名, score)，按 score 降序。"""
+    if not isinstance(raw, dict):
+        return []
+    tables = raw.get("tables") or raw.get("table_names") or []
+    if not isinstance(tables, list):
+        return []
+    scored: List[Tuple[str, int]] = []
+    for item in tables:
+        if isinstance(item, str):
+            name = item.strip()
+            if name:
+                scored.append((name, 0))
+        elif isinstance(item, dict):
+            name = (item.get("table_name") or item.get("name") or "").strip()
+            if not name:
+                continue
+            try:
+                score = int(item.get("score") or 0)
+            except (TypeError, ValueError):
+                score = 0
+            scored.append((name, score))
+    scored.sort(key=lambda x: (-x[1], x[0]))
+    return scored
+
+
+def resolve_schema_tables(
+    *,
+    tables: Any = None,
+    tables_json: str = "",
+    table_names: str = "",
+    fact_table: str = "",
+    join_tables: Any = None,
+    max_tables: int = 8,
+) -> List[str]:
+    """
+    拼 schema 的最小表集合（与 ERP 同构）：
+    1. 若提供 fact_table/join_tables → 优先维表推导集合；
+    2. 否则 LLM 选表 JSON 按 score 取 Top-N；
+    3. max_tables 限制 token（默认 8）。
+    """
+    cap = max(1, int(max_tables or 8))
+    ordered: List[str] = []
+    seen: set[str] = set()
+
+    def _add(name: str) -> None:
+        key = name.strip()
+        if not key:
+            return
+        norm = key.upper()
+        if norm in seen:
+            return
+        seen.add(norm)
+        ordered.append(key)
+
+    ft = (fact_table or "").strip()
+    joins = _normalize_table_names(join_tables)
+    if ft or joins:
+        if ft:
+            _add(ft)
+        for t in joins:
+            _add(t)
+        return ordered[:cap]
+
+    raw = tables if tables not in (None, "", []) else None
+    if raw is None:
+        raw = tables_json or table_names or ""
+    if isinstance(raw, str) and _looks_like_json_payload(raw):
+        try:
+            parsed = json.loads(_extract_json_text(raw))
+        except json.JSONDecodeError:
+            parsed = raw
+    else:
+        parsed = raw
+
+    scored = _score_llm_tables(parsed) if isinstance(parsed, dict) else []
+    if scored:
+        for name, _ in scored:
+            _add(name)
+            if len(ordered) >= cap:
+                break
+        return ordered
+
+    for name in _normalize_table_names(parsed):
+        _add(name)
+        if len(ordered) >= cap:
+            break
+    return ordered
+
+
+def _legacy_requested_tables(table_names: Any) -> List[str]:
+    """未接维表 fact_table/join_tables 时：保持原行为，全量表、不截断。"""
+    requested = _normalize_table_names(table_names)
+    seen: set[str] = set()
+    ordered: List[str] = []
+    for name in requested:
+        norm = name.upper()
+        if norm in seen:
+            continue
+        seen.add(norm)
+        ordered.append(name)
+    return ordered
 
 
 def build_context_for_tables(
@@ -184,6 +291,10 @@ def build_context_for_tables(
     config: Optional[Dict[str, str]] = None,
     separator: str = "\n\n---\n\n",
     slim_schema: bool = True,
+    fact_table: str = "",
+    join_tables: Any = None,
+    max_tables: int = 8,
+    use_dimension_tables: bool = False,
 ) -> Dict[str, Any]:
     """
     按表名列表拼接【参考表结构】context。
@@ -195,23 +306,39 @@ def build_context_for_tables(
       missing_tables: 未命中的表名
     """
     index = _get_index(config)
-    requested = _normalize_table_names(table_names)
+    upper_index = {k.upper(): v for k, v in index.items()}
+
+    if use_dimension_tables or (fact_table or "").strip() or join_tables:
+        requested = resolve_schema_tables(
+            fact_table=fact_table,
+            join_tables=join_tables,
+            max_tables=max_tables,
+        )
+    elif isinstance(table_names, list):
+        requested = _legacy_requested_tables(table_names)
+    elif isinstance(table_names, str) and _looks_like_json_payload(table_names):
+        requested = _legacy_requested_tables(table_names)
+    else:
+        requested = _legacy_requested_tables(table_names)
+
+    if not requested and not use_dimension_tables:
+        requested = _legacy_requested_tables(table_names)
 
     seen: set[str] = set()
     ordered: List[str] = []
     for name in requested:
-        key = name.upper()
-        if key in seen:
+        norm = name.strip().upper()
+        if norm in seen:
             continue
-        seen.add(key)
-        ordered.append(key)
+        seen.add(norm)
+        ordered.append(name.strip())
 
     parts: List[str] = []
     found: List[str] = []
     missing: List[str] = []
 
     for name in ordered:
-        section = index.get(name) or index.get(name.upper())
+        section = index.get(name) or upper_index.get(name.upper())
         if section:
             if slim_schema:
                 section = slim_schema_section(section)
@@ -232,13 +359,28 @@ def main(
     tables: Any = None,
     tables_json: str = "",
     table_names: str = "",
+    fact_table: str = "",
+    join_tables: Any = None,
+    max_tables: int = 8,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    # 优先级：tables（上游数组）> tables_json（JSON 字符串）> table_names
     raw = tables if tables not in (None, "", []) else None
     if raw is None:
         raw = tables_json or table_names or kwargs.get("tables") or ""
-    return build_context_for_tables(raw)
+    ft = (fact_table or kwargs.get("fact_table") or "").strip()
+    jt = join_tables if join_tables not in (None, "", []) else kwargs.get("join_tables")
+    try:
+        cap = int(max_tables or kwargs.get("max_tables") or 8)
+    except (TypeError, ValueError):
+        cap = 8
+    use_dimension = bool(ft or jt)
+    return build_context_for_tables(
+        raw,
+        fact_table=ft,
+        join_tables=jt,
+        max_tables=cap,
+        use_dimension_tables=use_dimension,
+    )
 
 
 # --- Dify 入口 ---
@@ -254,8 +396,27 @@ try:
     table_names
 except NameError:
     table_names = ""
+try:
+    fact_table
+except NameError:
+    fact_table = ""
+try:
+    join_tables
+except NameError:
+    join_tables = ""
+try:
+    max_tables
+except NameError:
+    max_tables = 8
 
-_out = main(tables=tables, tables_json=tables_json, table_names=table_names)
+_out = main(
+    tables=tables,
+    tables_json=tables_json,
+    table_names=table_names,
+    fact_table=fact_table or "",
+    join_tables=join_tables,
+    max_tables=max_tables,
+)
 context = str(_out.get("context") or "")
 table_count = str(_out.get("table_count") or "0")
 found_tables = str(_out.get("found_tables") or "")

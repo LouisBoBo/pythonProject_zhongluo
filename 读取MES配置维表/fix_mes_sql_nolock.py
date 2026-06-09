@@ -184,6 +184,54 @@ def _fix_cstate_columns(sql: str) -> str:
     return _cleanup_select_commas(out)
 
 
+# 化验任务枚举兜底（Dify 未部署打包 fix 节点时仍生效）
+_ASSAY_ENUM_FALLBACK = [
+    (
+        re.compile(r"(\w+)\.CTASK_TYPE\s+AS\s+\[任务类型\]", re.I),
+        (
+            "CASE \\1.CTASK_TYPE WHEN 1 THEN N'常规化验' WHEN 2 THEN N'异常化验' "
+            "ELSE CAST(\\1.CTASK_TYPE AS NVARCHAR(20)) END AS [任务类型]"
+        ),
+    ),
+    (
+        re.compile(r"(\w+)\.CTASK_STATUS\s+AS\s+\[任务状态\]", re.I),
+        (
+            "CASE \\1.CTASK_STATUS WHEN 0 THEN N'待执行' WHEN 1 THEN N'已执行' WHEN 2 THEN N'已关闭' "
+            "ELSE CAST(\\1.CTASK_STATUS AS NVARCHAR(20)) END AS [任务状态]"
+        ),
+    ),
+    (
+        re.compile(r"(\w+)\.CASSAY_STATUS\s+AS\s+\[化验状态\]", re.I),
+        (
+            "CASE \\1.CASSAY_STATUS WHEN 0 THEN N'待取样' WHEN 1 THEN N'待接收' WHEN 2 THEN N'待化验' "
+            "WHEN 3 THEN N'化验中' WHEN 4 THEN N'待审核' WHEN 5 THEN N'已审核' "
+            "ELSE CAST(\\1.CASSAY_STATUS AS NVARCHAR(20)) END AS [化验状态]"
+        ),
+    ),
+    (
+        re.compile(r"(\w+)\.CASSAY_RESULT\s+AS\s+\[化验结果\]", re.I),
+        (
+            "CASE \\1.CASSAY_RESULT WHEN 1 THEN N'正常' WHEN 2 THEN N'异常' "
+            "ELSE CAST(\\1.CASSAY_RESULT AS NVARCHAR(20)) END AS [化验结果]"
+        ),
+    ),
+    (
+        re.compile(r"(\w+)\.CCHECK_STATUS\s+AS\s+\[审核状态\]", re.I),
+        (
+            "CASE \\1.CCHECK_STATUS WHEN 1 THEN N'已审核' WHEN 0 THEN N'未审核' "
+            "ELSE CAST(\\1.CCHECK_STATUS AS NVARCHAR(20)) END AS [审核状态]"
+        ),
+    ),
+    (
+        re.compile(r"(\w+)\.CIS_OPEN_LINE\s+AS\s+\[是否开线前分析\]", re.I),
+        (
+            "CASE UPPER(RTRIM(\\1.CIS_OPEN_LINE)) WHEN 'Y' THEN N'是' WHEN 'N' THEN N'否' "
+            "ELSE \\1.CIS_OPEN_LINE END AS [是否开线前分析]"
+        ),
+    ),
+]
+
+
 def fix_enum_display_columns(sql: str) -> str:
     """将裸码值列替换为 CASE 译码（映射表已配置但 LLM 常仍输出裸字段）。"""
     out = sql
@@ -192,7 +240,8 @@ def fix_enum_display_columns(sql: str) -> str:
 
         out = apply_sql_display_rewrites(out)
     except ImportError:
-        pass
+        for pat, repl in _ASSAY_ENUM_FALLBACK:
+            out = pat.sub(repl, out)
 
     patterns = [
         (

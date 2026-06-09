@@ -764,7 +764,9 @@
           "as": "主键ID"
         }
       ],
-      "default_order_by": "mo.CPLAN_START_TIME DESC"
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "mo.CPLAN_START_TIME DESC, mo.CID DESC"
     },
     "TBL_SFC_WS_LOG_ITEM": {
       "fact_alias": "i",
@@ -1215,6 +1217,8 @@
           "as": "主键"
         }
       ],
+      "compact_rules": true,
+      "list_default_main_only": true,
       "default_order_by": "COALESCE(qir.CINSPECT_TIME, qir.CCHECK_TIME, qir.CLAB_INSPECT_TIME) DESC, qir.CID DESC"
     },
     "TBL_EAP_ALARM": {
@@ -3023,7 +3027,10 @@
       "fact_alias": "emt",
       "label": "保养任务主表",
       "default_for_keywords": [
-        "保养任务主表"
+        "保养任务",
+        "保养",
+        "保养任务主表",
+        "EAM_MAINTAIN"
       ],
       "mappings": [
         {
@@ -3205,7 +3212,10 @@
           "expr": "emt.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "emt.CTASK_CREATED_TIME DESC, emt.CID DESC"
     },
     "TBL_EAM_MAINTAIN_TASK_CHANGE_LOG": {
       "fact_alias": "emt",
@@ -10545,7 +10555,8 @@
           "expr": "mbp.CSUPPLIER_BARCODE",
           "as": "供应商条码"
         }
-      ]
+      ],
+      "compact_rules": true
     },
     "TBL_MO_OUTS": {
       "fact_alias": "moout",
@@ -12721,6 +12732,7 @@
           "as": "主键"
         }
       ],
+      "compact_rules": true,
       "default_order_by": "COALESCE(qal.CASSAY_TIME, qal.CSAMPLE_TIME, qal.CRECEIVE_TIME, qal.CTASK_STAND_TIME_S) DESC, qal.CID DESC"
     },
     "TBL_QM_ASSAY_LOG_ITEM": {
@@ -17229,7 +17241,10 @@
           "expr": "sp.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "sp.CPURCHASE_DATE DESC, sp.CID DESC"
     },
     "TBL_SRM_PO_DELIVERY": {
       "fact_alias": "spd",
@@ -17513,7 +17528,8 @@
           "expr": "spd.CID",
           "as": "主键"
         }
-      ]
+      ],
+      "compact_rules": true
     },
     "TBL_SRM_RECEIVING": {
       "fact_alias": "sr",
@@ -17695,6 +17711,8 @@
           "as": "主键"
         }
       ],
+      "compact_rules": true,
+      "list_default_main_only": true,
       "default_order_by": "sr.CRECEIVING_DATE DESC, sr.CID DESC"
     },
     "TBL_SRM_RECEIVING_BARCODE": {
@@ -18142,10 +18160,12 @@
       "fact_alias": "su",
       "label": "系统用户表",
       "default_for_keywords": [
-        "系统用户表",
         "系统用户",
         "用户表",
-        "用户列表"
+        "用户列表",
+        "用户明细",
+        "用户信息",
+        "查询用户"
       ],
       "mappings": [
         {
@@ -18224,11 +18244,44 @@
             "su.CSTATE AS [状态标识]",
             "su.CSTATE AS [状态]",
             "su.CSTATE AS [状态中文]",
-            "CASE UPPER(RTRIM(su.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE su.CSTATE END AS [状态中文]",
-            "su.CPASSWORD AS [密码]"
+            "CASE UPPER(RTRIM(su.CSTATE)) WHEN 'A' THEN N'有效' WHEN 'D' THEN N'无效' ELSE su.CSTATE END AS [状态中文]"
           ],
           "match_type": "enum",
           "notes": "A→有效、D→无效；只输出一列[状态标识]，禁止[状态中文]/[状态]"
+        },
+        {
+          "id": "user_role",
+          "fact_columns": [
+            "CID"
+          ],
+          "joins": [
+            {
+              "alias": "urm",
+              "table": "TBL_SYS_USER_ROLE_MAP",
+              "on": "urm.CUSER_ID = su.CID"
+            },
+            {
+              "alias": "r",
+              "table": "TBL_SYS_ROLE",
+              "on": "r.CID = urm.CROLE_ID",
+              "depends_on": "urm"
+            }
+          ],
+          "select": [
+            {
+              "expr": "r.CROLE_CODE",
+              "as": "角色编码"
+            },
+            {
+              "expr": "r.CROLE_NAME",
+              "as": "角色名称"
+            }
+          ],
+          "forbidden": [
+            "su.CPASSWORD AS [密码]"
+          ],
+          "optional": true,
+          "notes": "用户问角色时 JOIN；一用户多角色按 su.CID, r.CID 多行"
         }
       ],
       "display_columns": [
@@ -18285,7 +18338,9 @@
           "as": "主键"
         }
       ],
-      "default_order_by": "su.CDATETIME_LAST_LOGIN DESC"
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "su.CDATETIME_LAST_LOGIN DESC, su.CID DESC"
     },
     "TBL_SYS_USER_ORG_MAP": {
       "fact_alias": "suo",
@@ -19364,7 +19419,9 @@
           "as": "备注"
         }
       ],
-      "default_order_by": "COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC"
+      "compact_rules": true,
+      "list_default_main_only": true,
+      "default_order_by": "COALESCE(wmr.COUT_TIME, wmr.CIN_TIME) DESC, wmr.CID DESC"
     },
     "TBL_WMS_PICKING_LOG": {
       "fact_alias": "wpl",
@@ -19501,7 +19558,8 @@
           "expr": "wpld.CREMARK",
           "as": "备注"
         }
-      ]
+      ],
+      "compact_rules": true
     },
     "TBL_WMS_STOCK_BARCODE_LINK": {
       "fact_alias": "wsb",

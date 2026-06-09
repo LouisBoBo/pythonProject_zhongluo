@@ -131,6 +131,10 @@ def infer_fact_table(
     ):
         scores["TBL_SRM_PO"] = scores.get("TBL_SRM_PO", 0) + 28
 
+    maintain_hints = ("保养任务", "保养计划", "设备保养")
+    if any(h in q for h in maintain_hints) and "维修" not in q:
+        scores["TBL_EAM_MAINTAIN_TASK"] = scores.get("TBL_EAM_MAINTAIN_TASK", 0) + 22
+
     best_table = ""
     best_score = 0
     for tname, score in scores.items():
@@ -344,10 +348,33 @@ def _build_query_rules_compact(
     """精简版维表规则：合并 JOIN/SELECT，跳过混查枚举与重复译码段。"""
     default_ob = (tcfg.get("default_order_by") or "").strip()
     list_main_only = bool(tcfg.get("list_default_main_only"))
+    enum_mps = [
+        mp
+        for mp in mappings
+        if mp.get("match_type") == "enum"
+        and (id_filter is None or (mp.get("id") or "") in id_filter)
+    ]
+
     lines: List[str] = [
         f"【维表映射·{tname}】{label}，别名 **`{alias}`**。",
-        f"`FROM dbo.{tname} {alias} WITH (NOLOCK)`；SELECT 每列须 `AS [中文名]`，禁裸英文字段作表头。",
     ]
+    if enum_mps:
+        lines.append(
+            "**【最高优先级·枚举译码】** "
+            "凡下列字段出现在 SELECT 中，**必须**用对应 CASE 表达式，"
+            "**禁止** `alias.字段 AS [中文名]` 裸输出数字/码值。"
+        )
+        for mp in enum_mps:
+            fcols = ", ".join(mp.get("fact_columns") or [])
+            for sel in mp.get("select") or []:
+                expr = _apply_alias(sel.get("expr") or "", alias)
+                as_name = sel.get("as") or ""
+                lines.append(f"- **{fcols}** → `[{as_name}]`：`{expr} AS [{as_name}]`")
+        lines.append("")
+
+    lines.append(
+        f"`FROM dbo.{tname} {alias} WITH (NOLOCK)`；SELECT 每列须 `AS [中文名]`，禁裸英文字段作表头。"
+    )
     if list_main_only:
         lines.append(
             "**列表默认（用户未点名关联维表字段/明细/详情/全部字段）**："
@@ -359,27 +386,6 @@ def _build_query_rules_compact(
             f"无时间 WHERE 的明细列表须 `ORDER BY {default_ob}`；仅 `COUNT(*)` 或 `GROUP BY` 除外。"
         )
     lines.append("")
-
-    enum_mps = [
-        mp
-        for mp in mappings
-        if mp.get("match_type") == "enum"
-        and (id_filter is None or (mp.get("id") or "") in id_filter)
-    ]
-    if enum_mps:
-        title = (
-            "### 枚举译码（列表默认必出，必写 CASE，禁裸码）"
-            if list_main_only
-            else "### 枚举译码（必写 CASE，禁裸码）"
-        )
-        lines.append(title)
-        for mp in enum_mps:
-            fcols = ", ".join(mp.get("fact_columns") or [])
-            for sel in mp.get("select") or []:
-                expr = _apply_alias(sel.get("expr") or "", alias)
-                as_name = sel.get("as") or ""
-                lines.append(f"- **{fcols}** → `[{as_name}]`：`{expr} AS [{as_name}]`")
-        lines.append("")
 
     display_cols: List[Dict[str, Any]] = tcfg.get("display_columns") or []
     if display_cols:
@@ -781,15 +787,84 @@ def _select_rewrite_pairs(
     return pairs
 
 
+_SQL_KEYWORD_ALIASES = frozenset(
+    {
+        "WITH",
+        "ON",
+        "LEFT",
+        "RIGHT",
+        "INNER",
+        "OUTER",
+        "JOIN",
+        "WHERE",
+        "ORDER",
+        "GROUP",
+        "BY",
+        "AND",
+        "OR",
+        "AS",
+        "SELECT",
+        "FROM",
+    }
+)
+
+
 def _detect_sql_table_aliases(sql: str) -> Dict[str, str]:
-    """SQL 别名 → 表名（FROM/JOIN dbo.TBL_xxx alias WITH (NOLOCK)）。"""
+    """SQL 别名 → 表名（FROM/JOIN dbo.TBL_xxx alias，优先匹配 WITH (NOLOCK)）。"""
     out: Dict[str, str] = {}
     for m in re.finditer(
-        r"(?:FROM|JOIN)\s+dbo\.(\w+)\s+(\w+)\s+WITH\s*(?:\(\s*)?NOLOCK",
+        r"(?:FROM|(?:LEFT|RIGHT|INNER|CROSS)\s+JOIN)\s+dbo\.(\w+)\s+(\w+)\s+WITH\s*(?:\(\s*)?NOLOCK",
         sql,
         re.I,
     ):
         out[m.group(2)] = _normalize_table_name(m.group(1))
+    for m in re.finditer(
+        r"(?:FROM|(?:LEFT|RIGHT|INNER|CROSS)\s+JOIN)\s+dbo\.(\w+)\s+(\w+)\b",
+        sql,
+        re.I,
+    ):
+        alias = m.group(2)
+        if alias.upper() in _SQL_KEYWORD_ALIASES:
+            continue
+        if alias not in out:
+            out[alias] = _normalize_table_name(m.group(1))
+    return out
+
+
+def _apply_flexible_enum_rewrites(
+    sql: str,
+    tcfg: Dict[str, Any],
+    alias: str,
+    *,
+    config: Optional[Dict[str, Any]] = None,
+) -> str:
+    """宽松匹配 alias.col AS [中文名]（含多余空格），替换为 CASE 译码。"""
+    cfg = config or {}
+    default_alias = (
+        tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l"
+    ).strip()
+    out = sql
+    for mp in tcfg.get("mappings") or []:
+        for sel in mp.get("select") or []:
+            expr = sel.get("expr") or ""
+            if not expr.upper().startswith("CASE "):
+                continue
+            as_name = (sel.get("as") or "").strip()
+            if not as_name:
+                continue
+            case_sql = _replace_sql_alias(expr, default_alias, alias)
+            full = f"{case_sql} AS [{as_name}]"
+            cols = list(mp.get("fact_columns") or [])
+            if not cols:
+                m = re.search(rf"\b{re.escape(alias)}\.(\w+)", case_sql, re.I)
+                if m:
+                    cols = [m.group(1)]
+            for fc in cols:
+                pat = (
+                    rf"\b{re.escape(alias)}\.{re.escape(fc)}\s+AS\s+"
+                    rf"\[{re.escape(as_name)}\]"
+                )
+                out = re.sub(pat, full, out, flags=re.IGNORECASE)
     return out
 
 
@@ -813,24 +888,27 @@ def apply_sql_display_rewrites(
                 continue
             for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
                 out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
-        return out
-
-    check_tables: List[str] = []
-    if fact_table:
-        t = _normalize_table_name(fact_table)
-        if t in tables:
-            check_tables.append(t)
+            out = _apply_flexible_enum_rewrites(out, tcfg, alias, config=cfg)
     else:
-        upper = sql.upper()
-        for tname in tables:
-            if tname in upper:
-                check_tables.append(tname)
+        check_tables: List[str] = []
+        if fact_table:
+            t = _normalize_table_name(fact_table)
+            if t in tables:
+                check_tables.append(t)
+        else:
+            upper = sql.upper()
+            for tname in tables:
+                if tname in upper:
+                    check_tables.append(tname)
 
-    for tname in check_tables:
-        tcfg = tables[tname]
-        alias = (tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l").strip()
-        for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
-            out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
+        for tname in check_tables:
+            tcfg = tables[tname]
+            alias = (
+                tcfg.get("fact_alias") or cfg.get("default_fact_alias") or "l"
+            ).strip()
+            for bare, full in _select_rewrite_pairs(tcfg, alias, config=cfg):
+                out = re.sub(re.escape(bare), full, out, flags=re.IGNORECASE)
+            out = _apply_flexible_enum_rewrites(out, tcfg, alias, config=cfg)
     return out
 
 

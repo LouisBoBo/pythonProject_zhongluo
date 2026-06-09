@@ -1,171 +1,121 @@
-# 维表映射配置维护说明
+# ERP 查数配置 · 同事一页纸
 
-本目录用于配置 ERP 自然语言查数时的**外键 → 维表 JOIN → 中文列名**规则，供 Dify 工作流注入【维表映射规则】，避免列表里只显示 ID、账号。
-
----
-
-## 日常只需关心 2 个文件
-
-| 文件 | 是否手改 | 作用 |
-|------|----------|------|
-| `../中络项目ERP 系统数据库表结构V1.0.md` | **要** | 表结构、字段中文名、**关联关系**（权威来源） |
-| `erp_dimension_joins.map` | **要** | 维表 JOIN / SELECT 中文别名（表格式，推荐维护入口） |
-| `erp_dimension_joins.json` | 不要手改 | 由 `build_dify_bundle.py` 从 `.map` 解析生成 |
-| `dify_erp_dimension_node.py` | 不要手改 | 维表规则，复制到 Dify **SQL 生成前** |
-| **`dify_erp_sql_fix_node.py`** | 不要手改 | **SQL 修复，复制到 LLM 与 text2data 之间（必加）** |
-
-其余为工具脚本，一般不用改：
-
-| 文件 | 作用 |
-|------|------|
-| `parse_dimension_map.py` | `.map` → JSON 解析器 |
-| `erp_dimension_rules.py` | 根据配置生成 Markdown 规则文本 |
-| `build_dify_bundle.py` | 同步 JSON + 打包 Dify 单文件节点 |
-| `generate_dimension_map_from_schema.py` | 从表结构文档**批量重生成**整个 `.map` |
+> 详细架构见 [`ERP_Dify工作流优化说明.md`](./ERP_Dify工作流优化说明.md) §11。
 
 ---
 
-## 加一张新表
+## 只需记住 3 个「手改入口」
 
-### 第 1 步：更新表结构文档
+| # | 改什么 | 文件 |
+|---|--------|------|
+| ① | 维表 JOIN、中文列名、列表默认少 JOIN | **`erp_dimension_joins.map`** |
+| ② | 表字段、关联关系 | **`../中络项目ERP 系统数据库表结构V1.0.md`** |
+| ③ | 选表清单（表名+业务含义） | **`../中络项目ERP 系统表名清单V1.0.md`** |
 
-在 `中络项目ERP 系统数据库表结构V1.0.md` 中补充新表小节，**关联关系**写全，例如：
+**不要手改**：`dify_*.py`、`erp_dimension_joins.json`、`erp_table_schemas.json`（都是脚本生成的）。
 
-```markdown
-#### 200 新业务表 ( T_XXX_New )
-
-- **业务含义**：……
-- **所属数据库**：思方云2 ERP
-
-| 字段名 | 字段类型 | 是否为空 | 默认值 | 说明 |
-|--------|----------|----------|--------|------|
-| creatorId | int? | 是 | - | 建单人，对应T_User.recId |
-| plantsId | int? | 是 | - | 工厂，对应T_Plants.recId |
-- **关联关系**：
-  - T_XXX_New.creatorId = T_User.recId
-  - T_XXX_New.plantsId = T_Plants.recId
+改 LLM 话术 → 仓库根目录 `中络项目MES ERP生成SQL提示词.md` 等，复制到 Dify 对应 LLM 的 SYSTEM，**不用跑脚本**。
 
 ---
-```
 
-说明：创建人 `creatorId`、修改人 `modifiedBy` 等字段，脚本会按关联或字段名自动补 `T_User` 映射。
-
-### 第 2 步：更新映射配置（二选一）
-
-#### 方式 A — 只加一张表（推荐日常）
-
-在 `erp_dimension_joins.map` 末尾**复制**已有类似表（如 `FGI_ReceiptItem`），改表名、别名、ON 条件：
-
-```text
-[表 T_XXX_New]
-标签=新业务表
-关键词=新业务, XXX
-别名=x
-
-[映射 creator]
-字段=creatorId
-关联=u | T_User | u.recId = x.creatorId
-列=u.employeeName | 建单人
-列=u.loginName | 登录账号
-
-[映射 plants]
-字段=plantsId
-关联=pl | T_Plants | pl.recId = x.plantsId
-列=pl.name | 工厂名称
-```
-
-`关键词=` 用于用户问题里出现这些词时，自动选中该事实表。
-
-#### 方式 B — 从文档批量生成（表多或大改文档时）
+## 改完代码配置：一条命令
 
 ```bash
 cd 读取ERP配置维表
-python3 generate_dimension_map_from_schema.py
+python3 build_all.py
 ```
 
-**注意**：会**覆盖**整个 `erp_dimension_joins.map`，手改内容请先 git 提交或备份。
+然后到 Dify **全文替换** 这 3 个代码节点，并 **发布** workflow：
 
-### 第 3 步：同步到 Dify
+| 生成文件 | Dify 节点 |
+|----------|-----------|
+| `dify_erp_table_catalog.py` | 输出表名清单 |
+| `dify_erp_schema_by_tables.py` | 表结构 |
+| `dify_erp_dimension_node.py` | 维表映射 |
+| `dify_erp_sql_fix_node.py` | **SQL 修复**（LLM 之后，**必加**） |
+| `dify_erp_sql_db_validate_node.py` | **SQL 列校验**（fix 之后、text2data 之前，**推荐**） |
+
+另 1 个代码节点**很少改**，不用每次 build：
+
+| 文件 | Dify 节点 |
+|------|-----------|
+| `dify_current_datetime.py` | 当前时间 |
+
+**SQL 修复节点入参**：`query_sql`（或 `sql`）← LLM 输出；`user_question` ← `{{#sys.query#}}`  
+**SQL 列校验节点入参**：`fixed_sql` ← fix 节点；`server/port/username/password/database` ← 与 text2data **同一 ERP 库**  
+**出参**：`fixed_sql`（接到 text2data）；可选调试 `was_changed`、`removed_columns`、`tables_checked`、`table_column_counts`、`validate_error`
+
+核心逻辑在 **`sql_db_validate_core.py`**（MES 侧 `dify_mes_sql_db_validate_node.py` 共用，环境变量前缀分别为 `ERP_DB_*` / `MES_DB_*`）。
+
+Dify 沙箱需安装：`pip install sqlalchemy pymssql`
+
+---
+
+## 提示词文件（改完直接粘 Dify SYSTEM）
+
+| 文件 | Dify 节点 |
+|------|-----------|
+| `dify_erp_table_select_system_prompt.md` | 分析业务表 |
+| `../中络项目MES ERP生成SQL提示词.md` | SQL 生成（连线 `dimension_rules` + `rule_list`） |
+| `../中络项目ERP SQL约束规则提示词.md` | base 约束（入库 `erp_sql_rules`，非直接粘 LLM） |
+
+---
+
+## SQL 约束规则（PostgreSQL · 表 `erp_sql_rules`）
+
+与 MES 的 `mes_sql_rules` **完全独立**。
+
+| 层级 | 时机 | 文件 / 变量 | 接到 SQL LLM |
+|------|------|-------------|--------------|
+| 持久 learned | **循环外** | `dify_erp_sql_rules_db_read.py` → `rule_list` | 【规则约束】 |
+| 当轮报错规则 | **循环内** | `tiqu_error_rule` → `conversation.add_rules` | 【新增约束规则】 |
+| 持久化写入 | **循环内**报错后 | `dify_erp_sql_rules_db_write.py` | （写 DB，供下次 rule_list） |
 
 ```bash
-cd 读取ERP配置维表
-python3 build_dify_bundle.py
+python3 seed_erp_sql_rules.py              # 首次 / 改 base 约束 md 后
+python3 seed_erp_sql_learned_rules.py      # 可选：预置 learned
 ```
-
-将生成的 `dify_erp_dimension_node.py` **全文复制**到 Dify「代码」节点（入参：`user_question`；出参：`query_rules` 接到【维表映射规则】）。
 
 ---
 
-## `.map` 写法速查
-
-文件头部有完整注释，核心格式如下：
+## `.map` 最常改的两行（写在 `[映射]` 前面）
 
 ```text
-[全局]
-默认别名=l
-禁止=……
-
-[表 表名]
-标签=中文表名
-关键词=词1, 词2
-别名=SQL别名
-
-[映射 英文id]
-字段=事实表外键列
-类型=账号          # 仅人员账号字段
-可选=是            # 非必出映射
-说明=备注
-关联=别名 | 维表名 | ON条件 [| 依赖=上一别名]
-列=SQL表达式 | 中文列名
-禁止=错误写法示例
+精简规则=是
+列表默认=主表
 ```
 
----
-
-## 常见字段 → 抄哪段映射
-
-| 事实表字段 | 映射写法 |
-|-----------|----------|
-| `creatorId` | `[映射 creator]` → `T_User`（`u.recId = 事实表.creatorId`） |
-| `plantsId` | `[映射 plants]` → `T_Plants` |
-| `companyId` | `[映射 company]` → `T_Company` |
-| `sourceId` | 供应商/客户 → `M_Suppliers` 或 `S_Customer`（见文档关联） |
-| `fgiReceiptId` | 主表 → `FGI_Receipt` |
-
-制成品接收相关表见 `.map` 中 `FGI_Receipt` / `FGI_ReceiptItem` 示例。
+表示：列表查询只出本表列 + 枚举，默认不 JOIN 维表（用户点名「姓名/工厂/明细」再 JOIN）。
 
 ---
 
-## 维护流程一览
+## 发布前检查（30 秒）
 
-```text
-新表 / 新关联上线
-  │
-  ├─ 写入 中络项目ERP 系统数据库表结构V1.0.md
-  │
-  ├─ 只加 1 张表 ──► 手改 erp_dimension_joins.map
-  │
-  └─ 表很多 / 文档大改 ──► generate_dimension_map_from_schema.py
-  │
-  └─► python3 build_dify_bundle.py ──► 复制 dify_erp_dimension_node.py 到 Dify
-```
+- [ ] 跑了 `python3 build_all.py` 且无报错
+- [ ] 3 个 `dify_*.py` 已全文复制到 Dify
+- [ ] 若改了 `.md` 提示词，已同步到 LLM SYSTEM
+- [ ] 点击 **发布** workflow（不发布不生效）
+
+**回归 3 问**（可选）：制成品接收明细 / 制造订单列表 / 采购订单明细。
 
 ---
 
-## 本地验证（可选）
+## 本地试规则（可选）
 
 ```bash
-# 查看某张表生成的规则文本
-python3 erp_dimension_rules.py FGI_ReceiptItem
-
-# 按用户问题推断事实表
 python3 erp_dimension_rules.py --question "查制成品接收明细"
 ```
 
 ---
 
-## 相关文档
+## 与 MES 的边界
 
-- SQL 生成总规则：`../中络项目ERP 最新生成SQL提示词.md`
-- 表结构全文：`../中络项目ERP 系统数据库表结构V1.0.md`
-- 示例规则输出：`规则.txt`（仅供参考，以 `.map` / 代码节点为准）
+- ERP 配置**全部**在 `读取ERP配置维表/`；MES 在 `读取MES配置维表/`，**互不影响**。
+- ERP 表前缀 `P_`/`M_`/`S_`/`FGI_`/`T_` 等；**禁止**在 ERP workflow 中使用 MES 的 `TBL_*` 表。
+
+---
+
+## 换项目 / 新库（以后）
+
+复制本目录结构，替换 ①②③ 三个 md/map，再跑 `build_all.py`；workflow 骨架不变。
+批量生成 `.map`：`python3 generate_dimension_map_from_schema.py`（**会覆盖**，先备份）。

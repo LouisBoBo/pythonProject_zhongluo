@@ -22,11 +22,13 @@
 
 [全局]
 默认别名=fr
+默认精简规则=是
 禁止=FROM/JOIN 表名与 WITH (NOLOCK) 拆成两行
 禁止=无时间条件的明细列表查询省略 ORDER BY（须按主时间列 DESC 由近到远）
 禁止=使用 MES 表名/字段（TBL_*、CID、CWC_ID 等）解析 ERP 业务
 禁止=FGI_IQCResult/FGI_IQCItem/FGI_IQCHistory/FGI_IQCWF/P_WO 等表无 modifiedBy 列，禁止写 事实表.modifiedBy
 禁止=有 modifiedBy 的表其为字符串用户名，禁止 JOIN T_User ON recId = 事实表.modifiedBy；修改人直接用 事实表.modifiedBy AS [修改人]
+禁止=M_PurchaseOrder 数据字典无字段明细，禁止 SELECT 该表列（purchaseOrderId 关联仅用 recId）；原材料采购查 M_PurchaseOrderItem；外协采购查 S_OS_PO
 
 [表 FGI_Receipt]
 标签=制成品接收单
@@ -11093,7 +11095,7 @@
 
 [表 M_PurchaseOrderItem]
 标签=采购明细单
-关键词=采购明细单
+关键词=采购明细单,采购订单,采购单,采购订单明细,原材料采购
 别名=mpur
 
 [映射 buyunit_to_unit]
@@ -14421,7 +14423,7 @@
 
 [表 P_SOBOM]
 标签=订单BOM表
-关键词=订单BOM表
+关键词=订单BOM表,订单BOM,SOBOM,P_SOBOM
 别名=psob
 
 [映射 bomunit_to_unit]
@@ -15823,7 +15825,7 @@
 
 [表 S_ContractMaterials]
 标签=材料销售订单（贸易）
-关键词=材料销售订单（贸易）
+关键词=材料销售订单（贸易）,材料销售订单,材料销售,贸易销售,材料贸易
 别名=scon
 
 [映射 contract_to_contract]

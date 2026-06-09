@@ -59,15 +59,18 @@
                │
                ▼
 ┌──────────────────────────────┐
-│ 代码：按表拼 schema             │  毫秒级，替代知识库
-│ dify_mes_schema_by_tables.py  │  输出 context
+│ 代码：按表拼 schema             │  毫秒级；入参 tables_json（**当前线上**）
+│ dify_mes_schema_by_tables.py  │  或 fact_table+join_tables（**调序后**）
 └──────────────┬───────────────┘
                │
                ▼
-    dimension / sql_rules / datetime
+    dimension / sql_rules / datetime          ← 循环外：读 DB rule_list
                │
                ▼
-         SQL LLM → fix_sql → text2data
+         SQL LLM → fix_sql → db_validate → text2data
+               │
+               └── 报错（循环内）→ tiqu_error_rule → conversation.add_rules
+                                    └→ dify_mes_sql_rules_db_write.py → mes_sql_rules
 ```
 
 **分工原则**
@@ -128,7 +131,7 @@
 |------|------|
 | 输出表名清单（代码） | 脚本 `dify_mes_table_catalog.py`；入参 `user_question` = `{{#sys.query#}}` |
 | 分析业务表（LLM） | SYSTEM = `dify_mes_table_select_system_prompt.md` 全文；USER = 仅一条 `{{#sys.query#}}` |
-| 表结构（代码） | 入参 `tables_json` = LLM 的 `text` 输出 |
+| 表结构（代码） | **推荐**：`fact_table` + `join_tables` = 维表节点；兼容旧：`tables_json` = LLM text |
 
 **常见错误**
 
@@ -143,9 +146,24 @@
 ### 4.1 按表拼 schema（替代知识库）
 
 - **文件**：`dify_mes_schema_by_tables.py`（由 `build_mes_schema_bundle.py` 生成）。
-- **入参**：`tables_json` / `table_names` / `tables` 数组。
+- **推荐 workflow 顺序**（ERP 文档 §3.1 同样标注为「推荐」，**ERP/MES 线上多为旧顺序**）：
+
+```
+【当前线上 · ERP/MES 常见】
+选表 LLM → schema（tables_json）→ 维表 → SQL LLM
+
+【启用 fact_table/join_tables 减 prompt 时】
+选表 LLM → 维表 → schema（fact_table + join_tables）→ SQL LLM
+```
+
+维表节点**只需** `user_question`，不依赖选表 JSON；但 schema 要接 `fact_table`/`join_tables` 时，**维表必须在 schema 之前**（旧顺序下无法把维表出参接回 schema）。
+
+- **入参**：
+  - **推荐**：`fact_table={{#维表节点.fact_table#}}`，`join_tables={{#维表节点.join_tables#}}`（可不传 `tables_json`）
+  - **兼容旧版**：仍只接 `tables_json` / `tables` 时行为与改前一致（全量表、不截断）
+  - `max_tables`：仅维表路径生效，默认 8
 - **出参**：`context`（参考表结构文本）、`found_tables`、`missing_tables`。
-- **效果**：选表后毫秒级出 schema，不再逐表检索知识库。
+- **效果**：选表后毫秒级出 schema；接维表后只拼事实表 + JOIN 维表，显著减少 SQL LLM token。
 
 ### 4.2 Schema 瘦身
 
@@ -153,9 +171,17 @@
 
 ### 4.3 SQL 规则与维度
 
-- **Learned rules**：`dify_mes_sql_rules_db_read.py` 仅读 DB 增量规则；基础规则保留在 SQL LLM system prompt。
-- **维度映射**：移除易误导 JOIN 的项（如 `TBL_EAM_REPAIR.CODE`）；列表类查询默认单表 SELECT。
-- **维护脚本**：`seed_mes_sql_rules.py`、`seed_mes_sql_learned_rules.py`。
+**约束规则两层（与 ERP 同构）**：
+
+| 变量 | 位置 | 来源 | 接到 SQL LLM |
+|------|------|------|--------------|
+| `rule_list` | **循环外** | `dify_mes_sql_rules_db_read.py` | 【规则约束】 |
+| `add_rules` | **循环内** | 报错提取 → `conversation.add_rules` | 【新增约束规则】 |
+
+- **Learned 持久化**：循环内 `dify_mes_sql_rules_db_write.py` 写入 `mes_sql_rules`；循环外读节点只返回 learned，**不含 base**
+- **基础约束**：`中络项目MES SQL约束规则提示词.md` 或 SQL LLM SYSTEM 正文
+- **维度映射**：`dify_mes_dimension_node.py` → `dimension_rules`
+- **维护脚本**：`seed_mes_sql_rules.py`、`seed_mes_sql_learned_rules.py`、`build_mes_sql_rules_db_bundle.py`
 
 ### 4.4 多表主从明细 · TOP (1000)（2026-06）
 
@@ -299,9 +325,17 @@ for q in ['查询近一个月维修工单', '压合工序生产记录', 'IPQC检
 
 1. `python3 build_dify_bundle.py` → 更新 **维表** 代码节点
 2. `python3 build_mes_schema_bundle.py` → 更新 **表结构** 代码节点
-3. 复制 **`中络项目MES MES生成SQL提示词.md`** → SQL LLM SYSTEM
-4. 确认 **fix_mes_sql_nolock.py** 在 SQL LLM 与 text2data 之间
-5. 每次修改后 **发布** workflow
+3. **（可选）调整 workflow 顺序以启用最小 schema** — ERP 文档同样写为「推荐」，**并非 ERP 已上线的新顺序**：
+   - **当前线上（ERP/MES 常见）**：选表 → **schema** → **维表** → SQL LLM（schema 仍用 `tables_json`，**与改代码前一致**）
+   - **启用优化时**：选表 → **维表** → **schema** → SQL LLM，schema 接 `fact_table` / `join_tables`
+4. **schema 节点入参**（推荐）：
+   - `fact_table` = `{{#维表节点.fact_table#}}`
+   - `join_tables` = `{{#维表节点.join_tables#}}`
+   - 可移除 `tables_json`（未改接线前仍兼容全量表）
+5. 复制 **`中络项目MES MES生成SQL提示词.md`** → SQL LLM SYSTEM
+6. 确认 **fix_mes_sql_nolock.py** 在 SQL LLM 与 text2data 之间
+7. **`dify_mes_sql_db_validate_node.py`**（fix 与 text2data 之间，**推荐**）
+8. 每次修改后 **发布** workflow
 
 ### 9.4 其它表启用精简维表
 
@@ -347,11 +381,13 @@ for q in ['查询近一个月维修工单', '压合工序生产记录', 'IPQC检
 | 你要改… | 维护文件 | 打包命令 | Dify 节点 |
 |---------|----------|----------|-----------|
 | 维表 JOIN / 枚举 / 列表默认列 | `mes_dimension_joins.map` | `python3 build_dify_bundle.py` | 维表代码（`dify_mes_dimension_node.py`） |
-| 表结构 / 新字段 | `../中络项目MES 系统数据库表结构V1.2.md` | `python3 build_mes_schema_bundle.py` | 表结构代码（`dify_mes_schema_by_tables.py`） |
+| 表结构 / schema 最小表集 | `mes_schema_by_tables.py` | `python3 build_mes_schema_bundle.py` | 表结构代码；**维表在 schema 前**，接 `fact_table`+`join_tables` |
+| 表字段 / 新表 | `../中络项目MES 系统数据库表结构V1.2.md` | 同上 `build_mes_schema_bundle.py` | 表结构代码 |
 | 选表清单 / 预排序 | `../中络项目MES 系统表名清单V1.2.md`、`mes_table_catalog_rank.py` | `python3 build_mes_catalog_bundle.py` | 输出表名清单（`dify_mes_table_catalog.py`） |
 | 选表 LLM 消歧 | `dify_mes_table_select_system_prompt.md` | 无 | 分析业务表 LLM SYSTEM |
 | SQL 生成规则 | `../中络项目MES MES生成SQL提示词.md` | 无 | SQL LLM SYSTEM（连线 `dimension_rules`） |
 | SQL 修复 NOLOCK / TOP | `fix_mes_sql_nolock.py`、`mes_sql_multijoin.py` | 无（维表改 multijoin 时跑 `build_dify_bundle.py`） | fix 节点；入参 `user_question`=`{{#sys.query#}}` |
+| **SQL 库表列校验（207 兜底）** | `../读取ERP配置维表/sql_db_validate_core.py`（共用） | `python3 build_mes_sql_db_validate_bundle.py` | `dify_mes_sql_db_validate_node.py`（fix 与 text2data 之间） |
 | Learned 报错规则 | PostgreSQL / `seed_mes_sql_rules.py` | `python3 build_mes_sql_rules_db_bundle.py` | 读取 SQL 约束规则节点 |
 | 问题分类 查询/追问 | `../中络项目MES 问题分类器.md` | 无 | 分类器 LLM SYSTEM |
 | 历史能否复用 | `../中络项目MES 历史数据回复用户问题.md` | 无 | 充分性判定 LLM SYSTEM |
@@ -363,7 +399,7 @@ cd 读取MES配置维表
 python3 build_all.py
 ```
 
-等价于依次执行 `build_mes_catalog_bundle.py`、`build_mes_schema_bundle.py`、`build_dify_bundle.py`，并自动 `py_compile` 检查 3 个 `dify_*.py`。
+等价于依次执行 `build_mes_catalog_bundle.py`、`build_mes_schema_bundle.py`、`build_dify_bundle.py`、`build_mes_sql_db_validate_bundle.py`，并自动 `py_compile` 检查 4 个 `dify_*.py`。
 
 单独打包（仅改其中一项时可选）：
 
@@ -372,9 +408,10 @@ python3 build_mes_catalog_bundle.py   # 仅表清单
 python3 build_mes_schema_bundle.py    # 仅表结构
 python3 build_dify_bundle.py          # 仅维表 .map
 python3 build_mes_sql_rules_db_bundle.py  # 仅 learned 规则节点（少改）
+python3 build_mes_sql_db_validate_bundle.py  # 仅 SQL 列校验节点
 ```
 
-Dify：**替换 3 个 dify 代码节点全文 → 核对连线 → 发布 workflow**。
+Dify：**替换 4 个 dify 代码节点全文 → 核对连线 → 发布 workflow**。
 
 ### 11.4 工作流连线速查
 
@@ -382,13 +419,17 @@ Dify：**替换 3 个 dify 代码节点全文 → 核对连线 → 发布 workfl
 sys.query
   → dify_mes_table_catalog.py          user_question
   → 分析业务表 LLM                     dify_mes_table_select_system_prompt.md
-  → dify_mes_schema_by_tables.py       tables_json = LLM text
-  → dify_mes_dimension_node.py         user_question → dimension_rules
+  → dify_mes_schema_by_tables.py       tables_json = LLM text（**当前线上**）
+  → dify_mes_dimension_node.py         user_question → dimension_rules, fact_table, join_tables
   → dify_current_datetime.py           current_datetime
-  → dify_mes_sql_rules_db_read.py       rule_list
+  → dify_mes_sql_rules_db_read.py       rule_list（循环外）
   → SQL LLM                            中络项目MES MES生成SQL提示词.md
   → fix_mes_sql_nolock.py              sql + user_question → fixed_sql
+  → dify_mes_sql_db_validate_node.py   fixed_sql + DB 连接 → fixed_sql（推荐）
   → text2data
+       └─ 报错（循环内）→ tiqu_error_rule → conversation.add_rules
+                         → dify_mes_sql_rules_db_write.py → mes_sql_rules
+       └─ 重试 → SQL LLM（带 add_rules + 上一次SQL/报错）
 ```
 
 会话前置（若启用）：`问题分类器.md` → `历史数据回复用户问题.md`。

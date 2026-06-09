@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""按表名从 MES 表结构文档提取小节，供 Dify 直接拼 context（替代循环知识库检索）。"""
+"""按表名从 ERP 表结构文档提取小节，供 Dify 直接拼 context（替代循环知识库检索）。"""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 _TABLE_HEADER_RE = re.compile(
-    r"^#### \d+ (.+?) \( (TBL_\w+) \)\s*$",
+    r"^#### \d+ (.+?) \(\s*([\w_]+)\s*\)\s*$",
     re.MULTILINE,
 )
 _SECTION_SPLIT_RE = re.compile(
-    r"(?=^#### \d+ .+? \( TBL_\w+ \)\s*$)",
+    r"(?=^#### \d+ .+? \(\s*[\w_]+\s*\)\s*$)",
     re.MULTILINE,
 )
 
@@ -28,7 +28,7 @@ def parse_schema_markdown(md_text: str) -> Dict[str, str]:
         m = _TABLE_HEADER_RE.search(part)
         if not m:
             continue
-        table_name = m.group(2)
+        table_name = m.group(2).strip()
         sections[table_name] = part.strip()
     return sections
 
@@ -39,13 +39,13 @@ def load_schema_index(
 ) -> Dict[str, str]:
     root = Path(__file__).resolve().parent
     if json_path is None:
-        json_path = root / "mes_table_schemas.json"
+        json_path = root / "erp_table_schemas.json"
     jp = Path(json_path)
     if jp.is_file():
         return json.loads(jp.read_text(encoding="utf-8"))
 
     if md_path is None:
-        md_path = root.parent / "中络项目MES 系统数据库表结构V1.2.md"
+        md_path = root.parent / "中络项目ERP 系统数据库表结构V1.0.md"
     mp = Path(md_path)
     if not mp.is_file():
         raise FileNotFoundError(f"未找到表结构文档：{mp}")
@@ -159,6 +159,7 @@ def slim_schema_section(
         return text
     idx = text.find(_RELATIONS_MARKER)
     if idx == -1:
+        # ERP 文档部分表用「-关联关系：」无加粗
         idx = text.find("-关联关系")
     if idx == -1:
         return text
@@ -204,7 +205,7 @@ def resolve_schema_tables(
     max_tables: int = 8,
 ) -> List[str]:
     """
-    拼 schema 的最小表集合（与 ERP 同构）：
+    拼 schema 的最小表集合：
     1. 若提供 fact_table/join_tables → 优先维表推导集合；
     2. 否则 LLM 选表 JSON 按 score 取 Top-N；
     3. max_tables 限制 token（默认 8）。
@@ -258,20 +259,6 @@ def resolve_schema_tables(
     return ordered
 
 
-def _legacy_requested_tables(table_names: Any) -> List[str]:
-    """未接维表 fact_table/join_tables 时：保持原行为，全量表、不截断。"""
-    requested = _normalize_table_names(table_names)
-    seen: set[str] = set()
-    ordered: List[str] = []
-    for name in requested:
-        norm = name.upper()
-        if norm in seen:
-            continue
-        seen.add(norm)
-        ordered.append(name)
-    return ordered
-
-
 def build_context_for_tables(
     table_names: Any,
     *,
@@ -281,7 +268,6 @@ def build_context_for_tables(
     fact_table: str = "",
     join_tables: Any = None,
     max_tables: int = 8,
-    use_dimension_tables: bool = False,
 ) -> Dict[str, Any]:
     """
     按表名列表拼接【参考表结构】context。
@@ -294,31 +280,33 @@ def build_context_for_tables(
     """
     index = _get_index(config)
     upper_index = {k.upper(): v for k, v in index.items()}
-
-    if use_dimension_tables or (fact_table or "").strip() or join_tables:
+    if (fact_table or "").strip() or join_tables:
         requested = resolve_schema_tables(
             fact_table=fact_table,
             join_tables=join_tables,
             max_tables=max_tables,
         )
     elif isinstance(table_names, list):
-        requested = _legacy_requested_tables(table_names)
+        requested = resolve_schema_tables(tables=table_names, max_tables=max_tables)
     elif isinstance(table_names, str) and _looks_like_json_payload(table_names):
-        requested = _legacy_requested_tables(table_names)
+        requested = resolve_schema_tables(tables_json=table_names, max_tables=max_tables)
     else:
-        requested = _legacy_requested_tables(table_names)
-
-    if not requested and not use_dimension_tables:
-        requested = _legacy_requested_tables(table_names)
+        requested = resolve_schema_tables(
+            table_names=str(table_names or ""),
+            max_tables=max_tables,
+        )
+    if not requested:
+        requested = _normalize_table_names(table_names)
 
     seen: set[str] = set()
     ordered: List[str] = []
     for name in requested:
-        norm = name.strip().upper()
+        key = name.strip()
+        norm = key.upper()
         if norm in seen:
             continue
         seen.add(norm)
-        ordered.append(name.strip())
+        ordered.append(key)
 
     parts: List[str] = []
     found: List[str] = []
@@ -360,11 +348,9 @@ def main(
         cap = int(max_tables or kwargs.get("max_tables") or 8)
     except (TypeError, ValueError):
         cap = 8
-    use_dimension = bool(ft or jt)
     return build_context_for_tables(
         raw,
         fact_table=ft,
         join_tables=jt,
         max_tables=cap,
-        use_dimension_tables=use_dimension,
     )

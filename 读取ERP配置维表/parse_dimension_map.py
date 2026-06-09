@@ -90,6 +90,8 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
         if section == "global":
             if key == "默认别名":
                 config["default_fact_alias"] = val
+            elif key == "默认精简规则" and val in ("是", "true", "True", "1", "yes"):
+                config["default_compact_rules"] = True
             elif key == "禁止":
                 config["global_forbidden"].append(val)
             continue
@@ -113,6 +115,12 @@ def parse_dimension_map(text: str) -> Dict[str, Any]:
                 tbl["fact_alias"] = val
             elif key == "默认排序":
                 tbl["default_order_by"] = val
+            elif key == "精简规则" and val in ("是", "true", "True", "1", "yes"):
+                tbl["compact_rules"] = True
+            elif key == "精简规则" and val in ("否", "false", "False", "0", "no"):
+                tbl["compact_rules"] = False
+            elif key == "列表默认" and val in ("主表", "main", "main_only"):
+                tbl["list_default_main_only"] = True
             continue
 
         if section == "mapping" and current_mapping is not None:

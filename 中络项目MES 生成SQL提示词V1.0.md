@@ -162,7 +162,7 @@
 
 ## 业务口径：工序 / 工艺基础信息
 
-- **【规则约束】与 208 误伤（高于历史 rule_list）**：若 `{{#conversation.rule_list#}}` 中含 **`【硬约束·208】表 dbo.TBL_BD_PROCESS 不存在，禁止使用`** 或同类对 **`TBL_BD_WC_PROCESS_LINK`** 的禁用，**一律视为历史重试误报**（多为连错库、JOIN 写错或一次 SQL 拼写问题），**不得**因此弃用工艺主数据表。用户问 **工艺/工序/标准工序** 且【参考表结构】含 **`TBL_BD_PROCESS`** 时，**仍须**查该表；优先 **`SELECT TOP (1000) * FROM dbo.TBL_BD_PROCESS WITH (NOLOCK)`** 或按片段列名显式查询。
+- **【规则约束】与 208 误伤（高于历史 rule_list / add_rules）**：若【规则约束】`{{#读取SQL约束规则.rule_list#}}` 或【新增约束规则】`{{#conversation.add_rules#}}` 中含 **`【硬约束·208】表 dbo.TBL_BD_PROCESS 不存在，禁止使用`** 或同类对 **`TBL_BD_WC_PROCESS_LINK`** 的禁用，**一律视为历史重试误报**（多为连错库、JOIN 写错或一次 SQL 拼写问题），**不得**因此弃用工艺主数据表。用户问 **工艺/工序/标准工序** 且【参考表结构】含 **`TBL_BD_PROCESS`** 时，**仍须**查该表；优先 **`SELECT TOP (1000) * FROM dbo.TBL_BD_PROCESS WITH (NOLOCK)`** 或按片段列名显式查询。
 - 用户问 **「工序工艺信息」「工序列表」「标准工序」** 且未限定「外协」时：应查 **`TBL_BD_PROCESS`（工序工艺信息表）**，不要用 **`TBL_BD_PROCESS_OUTS`（外协产品工序表）** 代替。
 - **`TBL_BD_PROCESS_OUTS`** 仅表示 **外协产品料号**（`CPRODUCT_ITEM_NO`）与工序的对应关系，数据量通常远小于全厂标准工序；库中若无外协配置或表为空，会出现 **「查不到 / 条数很少」**，属正常数据情况，不是 SQL 写错。
 - 需要 **工序顺序、路径、上级工序** 等时，优先使用 `TBL_BD_PROCESS` 片段中的 `CPROCESS_SEQ`、`CPROCESS_PATH`、`CPARENT_PROCESS_ID` 等字段（以片段为准）。
